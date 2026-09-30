@@ -5,69 +5,386 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bumerân – educação e finanças para quem empreende</title>
 <meta name="description" content="Bumerân: educação financeira e ferramentas simples para pequenos negócios. Aprenda, organize, evolua.">
+<meta name="theme-color" content="#03152f">
+<meta property="og:title" content="Bumerân – educação e finanças para quem empreende">
+<meta property="og:description" content="Saiba quanto sobra de verdade no seu negócio. Educação financeira e ferramentas simples.">
 <link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
 <style>
-:root{--bg:#010f26;--bg2:#00081a;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);--tx:#f4f6fa;--mut:#aab4c8;--o1:#ff7100;--o2:#f32800}
-*{box-sizing:border-box}
-body{margin:0;background:radial-gradient(1100px 600px at 80% -10%,rgba(255,113,0,.22),transparent 60%),linear-gradient(180deg,var(--bg),var(--bg2));min-height:100vh;color:var(--tx);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-.w{max-width:880px;margin:0 auto;padding:0 20px}
-nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:.2px}
-.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(160deg,var(--o1),var(--o2));display:grid;place-items:center;font-weight:900;color:#fff;font-size:20px}
-nav a.l{color:var(--mut);text-decoration:none;font-size:14px}
-.hero{padding:54px 0 34px}
-h1{font-size:clamp(32px,7vw,54px);line-height:1.08;margin:0 0 16px;letter-spacing:-.5px}
-h1 em{font-style:normal;background:linear-gradient(90deg,var(--o1),var(--o2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.lead{color:var(--mut);font-size:18px;max-width:560px;margin:0 0 26px}
-.btn{display:inline-block;text-decoration:none;font-weight:700;border-radius:14px;padding:14px 22px;background:linear-gradient(180deg,var(--o1),var(--o2));color:#fff}
-.btn.sec{background:transparent;border:1.5px solid var(--line);color:var(--tx);margin-left:8px}
-@media(max-width:520px){.btn.sec{margin:10px 0 0}}
-.grid{display:grid;gap:16px;margin:34px 0}@media(min-width:720px){.grid{grid-template-columns:1fr 1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;backdrop-filter:blur(8px)}
-.card h2{margin:0 0 6px;font-size:22px}.card p{color:var(--mut);margin:6px 0 16px}
-.tag{font-size:12px;font-weight:700;color:var(--o1);text-transform:uppercase;letter-spacing:1px}
-.card a{color:var(--o1);font-weight:700;text-decoration:none}
-.free{margin:10px 0 40px}
-footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--mut);font-size:13px}
+:root{
+  --bg:#03152f;--bg2:#010b1d;--ink:#f3f6fb;--mut:#a9b5cb;--dim:#6f7d97;
+  --o1:#ff7100;--o2:#f32800;--glass:rgba(255,255,255,.055);--line:rgba(255,255,255,.12);
+  --r:22px;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg2);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden}
+a{color:inherit}
+.w{max-width:1120px;margin:0 auto;padding:0 22px}
+h1,h2,h3{line-height:1.12;margin:0;letter-spacing:-.02em}
+h2{font-size:clamp(28px,4.6vw,44px)}
+.grad{background:linear-gradient(90deg,var(--o1),var(--o2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--o1);margin-bottom:14px}
+.sub{color:var(--mut);font-size:18px;max-width:620px;margin:14px 0 0}
+
+/* header */
+header{position:fixed;inset:0 0 auto 0;z-index:50;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+header.s{background:rgba(1,11,29,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-color:var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;height:70px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:800;font-size:21px;letter-spacing:-.01em}
+.brand img{width:38px;height:auto;display:block}
+nav.m{display:none;gap:28px}
+nav.m a{text-decoration:none;color:var(--mut);font-size:15px;font-weight:600;transition:color .2s}
+nav.m a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:700;border-radius:999px;padding:13px 24px;background:linear-gradient(180deg,var(--o1),var(--o2));color:#fff;box-shadow:0 10px 30px -10px rgba(255,90,0,.7);transition:transform .2s,box-shadow .2s;border:0;cursor:pointer;font-size:16px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 38px -10px rgba(255,90,0,.85)}
+.btn.g{background:transparent;border:1.5px solid var(--line);box-shadow:none;color:var(--ink)}
+.btn.g:hover{border-color:rgba(255,255,255,.4)}
+.btn.sm{padding:9px 18px;font-size:14px;white-space:nowrap}.btn.sm .sh{display:inline}.btn.sm .lg{display:none}@media(min-width:520px){.btn.sm .sh{display:none}.btn.sm .lg{display:inline}}
+@media(min-width:860px){nav.m{display:flex}}
+
+/* hero */
+.hero{position:relative;padding:140px 0 70px;background:radial-gradient(900px 520px at 85% 0,rgba(255,113,0,.22),transparent 65%),radial-gradient(700px 500px at 0 30%,rgba(24,82,190,.22),transparent 65%),linear-gradient(180deg,var(--bg),var(--bg2));overflow:hidden}
+.fx{position:absolute;inset:0;pointer-events:none;opacity:.55}
+.fx svg{width:100%;height:100%}
+.ln{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1600;stroke-dashoffset:1600;animation:draw 5s ease forwards}
+.ln.a{stroke:rgba(255,113,0,.55);stroke-width:2.5}.ln.b{stroke:rgba(255,255,255,.18);stroke-width:1.5;animation-delay:.8s}.ln.c{stroke:rgba(90,150,255,.3);stroke-width:1.5;animation-delay:1.4s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.gridl{stroke:rgba(255,255,255,.05);stroke-width:1}
+.hero .w{position:relative;display:grid;gap:50px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:9px;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;color:var(--mut);margin-bottom:22px}
+.dot{width:8px;height:8px;border-radius:50%;background:#2bd67b;box-shadow:0 0 0 0 rgba(43,214,123,.6);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(43,214,123,0)}100%{box-shadow:0 0 0 0 rgba(43,214,123,0)}}
+h1{font-size:clamp(40px,8.4vw,74px);font-weight:900}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.trust{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:34px;color:var(--mut);font-size:14px}
+.trust span::before{content:"✓";color:var(--o1);font-weight:900;margin-right:7px}
+.phones{position:relative;height:360px;display:flex;justify-content:center}
+.ph{position:absolute;width:176px;border-radius:30px;padding:8px;background:linear-gradient(160deg,#27324a,#0c1426);box-shadow:0 40px 80px -20px rgba(0,0,0,.8),inset 0 0 0 1.5px rgba(255,255,255,.14)}
+.ph img{display:block;width:100%;border-radius:23px}
+.ph.p1{left:50%;transform:translateX(-96%) rotate(-7deg);top:26px;animation:fl 7s ease-in-out infinite}
+.ph.p2{left:50%;transform:translateX(-4%) rotate(6deg);top:0;animation:fl 7s ease-in-out infinite reverse}
+@keyframes fl{50%{translate:0 -14px}}
+@media(min-width:520px){.phones{height:440px}.ph{width:210px}}
+@media(min-width:900px){.hero .w{grid-template-columns:1.05fr .95fr}.phones{height:520px}.ph{width:250px}}
+
+/* strip */
+.strip{border-block:1px solid var(--line);background:rgba(255,255,255,.025);overflow:hidden;padding:16px 0}
+.mq{display:flex;gap:44px;width:max-content;animation:mq 38s linear infinite;color:var(--dim);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px}
+.mq span::after{content:"•";margin-left:44px;color:var(--o1)}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+section{padding:96px 0;position:relative}
+.head{margin-bottom:46px}
+.grid{display:grid;gap:18px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:28px;transition:transform .3s,border-color .3s,background .3s}
+.card:hover{transform:translateY(-5px);border-color:rgba(255,113,0,.45);background:rgba(255,255,255,.075)}
+.ico{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(160deg,rgba(255,113,0,.22),rgba(243,40,0,.1));border:1px solid rgba(255,113,0,.35);margin-bottom:18px}
+.ico svg{width:24px;height:24px;stroke:var(--o1);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-size:20px;margin-bottom:8px}.card p{color:var(--mut);margin:0}
+
+/* steps */
+.steps{counter-reset:s}
+.step{position:relative;padding-top:8px}
+.step::before{counter-increment:s;content:"0" counter(s);font-size:54px;font-weight:900;color:transparent;-webkit-text-stroke:1.5px rgba(255,113,0,.6);display:block;line-height:1;margin-bottom:10px}
+
+/* divisions */
+.div{display:grid;gap:18px}@media(min-width:800px){.div{grid-template-columns:1fr 1fr}}
+.big{padding:34px;min-height:260px;display:flex;flex-direction:column;justify-content:space-between}
+.big .tag{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--o1)}
+.big h3{font-size:30px;margin:8px 0 10px}
+.big a.l{color:var(--o1);font-weight:700;text-decoration:none;margin-top:22px;display:inline-block}
+.big a.l:hover{text-decoration:underline}
+
+/* product */
+.prod{background:linear-gradient(180deg,transparent,rgba(255,113,0,.06),transparent)}
+.pg{display:grid;gap:50px;align-items:center}@media(min-width:900px){.pg{grid-template-columns:.95fr 1.05fr}}
+.ph.solo{position:relative;width:260px;margin:0 auto;animation:none;transform:none}
+.tabs{display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.tabs button{background:var(--glass);border:1px solid var(--line);color:var(--mut);padding:8px 16px;border-radius:999px;font-weight:700;cursor:pointer;font-size:14px}
+.tabs button.on{background:linear-gradient(180deg,var(--o1),var(--o2));color:#fff;border-color:transparent}
+.ul{list-style:none;padding:0;margin:26px 0;display:grid;gap:12px}
+.ul li{display:flex;gap:12px;color:var(--mut)}
+.ul li::before{content:"";flex:none;width:22px;height:22px;border-radius:50%;background:rgba(255,113,0,.18) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff7100' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/14px no-repeat;margin-top:2px}
+.ul b{color:var(--ink)}
+.price{display:flex;gap:22px;flex-wrap:wrap;margin:6px 0 26px;color:var(--mut)}
+.price div{border-left:2px solid var(--o1);padding-left:14px}.price strong{display:block;color:#fff;font-size:26px}
+
+/* cases */
+.cases{display:grid;gap:18px}@media(min-width:900px){.cases{grid-template-columns:1.3fr 1fr 1fr}}
+.case{padding:28px}
+.case small{color:var(--dim);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.num{font-size:44px;font-weight:900;letter-spacing:-.03em;margin:8px 0 4px}
+.stack{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:18px 0 14px;background:rgba(255,255,255,.06)}
+.stack i{display:block;height:100%;width:0;transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+.stack.go i{width:var(--w)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mut)}
+.leg b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.note{font-size:12.5px;color:var(--dim);margin-top:22px}
+
+/* numbers */
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;text-align:center}
+.nums .card{padding:30px 16px}.nums strong{display:block;font-size:46px;font-weight:900;line-height:1;margin-bottom:8px}.nums strong span{font-size:inherit;color:inherit}.nums .card>span{color:var(--mut);font-size:14px}
+
+/* faq */
+details{border-bottom:1px solid var(--line);padding:20px 0}
+summary{cursor:pointer;font-weight:700;font-size:18px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::after{content:"+";color:var(--o1);font-size:26px;line-height:1;transition:transform .25s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{color:var(--mut);margin:12px 0 0;max-width:720px}
+
+/* final cta */
+.final{text-align:center;padding:110px 0;background:radial-gradient(700px 360px at 50% 100%,rgba(255,113,0,.25),transparent 70%)}
+.final .sub{margin-inline:auto}.final .cta{justify-content:center}
+footer{border-top:1px solid var(--line);padding:38px 0 60px;color:var(--dim);font-size:13.5px}
+.fg{display:grid;gap:24px}@media(min-width:800px){.fg{grid-template-columns:1.2fr 1fr}}
+footer a{color:var(--mut);text-decoration:none}footer a:hover{color:#fff}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s ease}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.12s}.rv.d2{transition-delay:.24s}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.ln{stroke-dashoffset:0}.stack i{width:var(--w)}}
 </style>
 </head>
 <body>
-<div class="w">
-<nav>
-  <div class="logo"><div class="mark">B</div>Bumerân</div>
-  <a class="l" href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">@bumeran_edu</a>
-</nav>
 
+<header id="hd">
+  <div class="w bar">
+    <a class="brand" href="#topo"><img src="assets/logo-mark.png" alt="">Bumerân</a>
+    <nav class="m">
+      <a href="#problema">O desafio</a>
+      <a href="#como">Como funciona</a>
+      <a href="#solucoes">Soluções</a>
+      <a href="#exemplos">Exemplos</a>
+      <a href="#duvidas">Dúvidas</a>
+    </nav>
+    <a class="btn sm" href="financas/"><span class="lg">Meu Painel do Dono</span><span class="sh">Conhecer</span></a>
+  </div>
+</header>
+
+<main id="topo">
 <section class="hero">
-  <h1>Aprenda, organize, <em>evolua</em>.</h1>
-  <p class="lead">Educação financeira e ferramentas simples para quem tem um negócio e quer saber, de verdade, quanto sobra no fim do mês.</p>
-  <a class="btn" href="financas/">Conhecer o Meu Painel do Dono</a>
-  <a class="btn sec" href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">Seguir no Instagram</a>
+  <div class="fx" aria-hidden="true">
+    <svg viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
+      <g>
+        <line class="gridl" x1="0" y1="140" x2="1200" y2="140"/><line class="gridl" x1="0" y1="280" x2="1200" y2="280"/>
+        <line class="gridl" x1="0" y1="420" x2="1200" y2="420"/><line class="gridl" x1="0" y1="560" x2="1200" y2="560"/>
+      </g>
+      <polyline class="ln b" points="0,520 120,500 210,540 330,470 430,490 540,410 650,430 760,350 880,380 990,290 1100,310 1200,240"/>
+      <polyline class="ln c" points="0,600 140,585 260,560 380,575 500,520 620,540 740,470 860,490 980,420 1100,430 1200,380"/>
+      <polyline class="ln a" points="0,470 100,455 200,490 320,420 430,440 550,350 660,380 780,290 890,320 1000,220 1110,250 1200,160"/>
+    </svg>
+  </div>
+  <div class="w">
+    <div>
+      <div class="badge"><span class="dot"></span>Educação financeira + ferramentas para pequenos negócios</div>
+      <h1>Aprenda, organize,<br><span class="grad">evolua.</span></h1>
+      <p class="sub">A Bumerân ajuda quem tem um negócio a entender, de verdade, quanto entra, quanto sai e quanto sobra no fim do mês.</p>
+      <div class="cta">
+        <a class="btn" href="financas/">Conhecer o Meu Painel do Dono</a>
+        <a class="btn g" href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">Seguir @bumeran_edu</a>
+      </div>
+      <div class="trust"><span>Sem mensalidade</span><span>Dados só no seu celular</span><span>Funciona sem internet</span></div>
+    </div>
+    <div class="phones" aria-hidden="true">
+      <div class="ph p1"><img src="assets/app-hist.jpg" alt="" loading="eager"></div>
+      <div class="ph p2"><img src="assets/app-painel.jpg" alt="" loading="eager"></div>
+    </div>
+  </div>
 </section>
 
-<div class="grid">
-  <div class="card">
-    <div class="tag">Educação</div>
-    <h2>Bumerân Edu</h2>
-    <p>Conteúdo gratuito sobre precificação, margem de lucro, caixa e planejamento para pequenos empresários.</p>
-    <a href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">Acompanhar no Instagram →</a>
-  </div>
-  <div class="card">
-    <div class="tag">Finanças</div>
-    <h2>Bumerân Finanças</h2>
-    <p>Ferramentas para organizar as contas do negócio. Hoje: o Meu Painel do Dono, um aplicativo de caixa e lucro, sem mensalidade.</p>
-    <a href="financas/">Ver o Meu Painel do Dono →</a>
-  </div>
-</div>
+<div class="strip" aria-hidden="true"><div class="mq" id="mq"></div></div>
 
-<div class="card free">
-  <div class="tag">Grátis</div>
-  <h2>Calculadora: quanto sobra na sua pizza?</h2>
-  <p>Compare o lucro vendendo no aplicativo de delivery e vendendo direto.</p>
-  <a href="financas/calculadora/">Abrir a calculadora →</a>
-</div>
+<section id="problema">
+  <div class="w">
+    <div class="head rv">
+      <span class="eyebrow">O desafio</span>
+      <h2>Faturou bem.<br><span class="grad">Mas quanto sobrou?</span></h2>
+      <p class="sub">A maioria dos pequenos negócios não quebra por falta de venda, e sim por falta de clareza sobre o próprio dinheiro.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card rv"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><path d="M3 11h18M7 15h3"/></svg></div><h3>Caixa não é lucro</h3><p>Dinheiro que entrou não é dinheiro que sobrou. Sem separar custo, retirada e venda, o resultado real fica escondido.</p></div>
+      <div class="card rv d1"><div class="ico"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></div><h3>Preço no chute</h3><p>Sem contar taxas, embalagem, fixos e margem, é fácil vender muito e ganhar pouco, ou nada.</p></div>
+      <div class="card rv d2"><div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div><h3>Contas espalhadas</h3><p>Fiado no caderno, boleto na memória, conta vencendo sem ninguém ver. Falta um lugar só para tudo isso.</p></div>
+    </div>
+  </div>
+</section>
 
-<footer>Bumerân · Conteúdo e ferramentas de organização financeira. Não somos banco, instituição financeira, escritório contábil nem auditoria, e nada aqui substitui um contador.</footer>
-</div>
+<section id="como">
+  <div class="w">
+    <div class="head rv"><span class="eyebrow">Como funciona</span><h2>Três passos, <span class="grad">um ciclo</span>.</h2>
+      <p class="sub">Como um bumerangue: o que você aprende volta para o seu negócio em forma de resultado.</p></div>
+    <div class="grid g3 steps">
+      <div class="step rv"><h3>Aprenda</h3><p style="color:var(--mut)">Conteúdo direto sobre precificação, margem, caixa e planejamento, sem economês.</p></div>
+      <div class="step rv d1"><h3>Organize</h3><p style="color:var(--mut)">Coloque entradas, saídas, contas e preços num só lugar, do celular, em segundos.</p></div>
+      <div class="step rv d2"><h3>Evolua</h3><p style="color:var(--mut)">Com os números claros, você decide melhor: quanto cobrar, quanto vender, onde cortar.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="solucoes">
+  <div class="w">
+    <div class="head rv"><span class="eyebrow">Soluções</span><h2>Duas frentes, <span class="grad">uma marca</span>.</h2></div>
+    <div class="div">
+      <div class="card big rv">
+        <div><div class="tag">Educação</div><h3>Bumerân Edu</h3>
+        <p>Conteúdo gratuito e prático para pequenos empresários: precificação, margem de lucro, fluxo de caixa e planejamento estratégico.</p></div>
+        <a class="l" href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">Acompanhar no Instagram →</a>
+      </div>
+      <div class="card big rv d1">
+        <div><div class="tag">Finanças</div><h3>Bumerân Finanças</h3>
+        <p>Ferramentas para organizar as contas do negócio. A primeira: o Meu Painel do Dono, aplicativo de caixa, lucro, preços e contas.</p></div>
+        <a class="l" href="financas/">Ver o Meu Painel do Dono →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="prod" id="painel">
+  <div class="w pg">
+    <div class="rv">
+      <div class="ph solo"><img id="shot" src="assets/app-painel.jpg" alt="Tela do Meu Painel do Dono"></div>
+      <div class="tabs" id="tabs">
+        <button data-i="assets/app-hist.jpg">Histórico</button>
+        <button data-i="assets/app-painel.jpg" class="on">Meta e equilíbrio</button>
+        <button data-i="assets/app-precos.jpg">Preços</button>
+        <button data-i="assets/app-contas.jpg">Contas</button>
+      </div>
+    </div>
+    <div class="rv d1">
+      <span class="eyebrow">Produto</span>
+      <h2>Meu Painel do Dono</h2>
+      <p class="sub">O controle financeiro que cabe no bolso do pequeno comerciante: simples de usar, sem mensalidade e sem ninguém vendo os seus números.</p>
+      <ul class="ul">
+        <li><span><b>Caixa e lucro lado a lado.</b> Veja o que entrou e o que realmente sobrou.</span></li>
+        <li><span><b>Preços que dão lucro.</b> Informe custos e taxas e descubra quanto cobrar.</span></li>
+        <li><span><b>Contas a pagar e a receber,</b> incluindo o fiado, com aviso do que está atrasado.</span></li>
+        <li><span><b>Meta do mês e ponto de equilíbrio</b> calculados para você.</span></li>
+        <li><span><b>Seus dados ficam só no seu celular.</b> Funciona até sem internet.</span></li>
+      </ul>
+      <div class="price">
+        <div>Básico<strong>R$ 47</strong>pagamento único</div>
+        <div>Avançado<strong>R$ 97</strong>pagamento único</div>
+      </div>
+      <div class="cta" style="margin-top:0"><a class="btn" href="financas/">Ver planos e testar grátis</a><a class="btn g" href="financas/calculadora/">Calculadora grátis da pizza</a></div>
+    </div>
+  </div>
+</section>
+
+<section id="exemplos">
+  <div class="w">
+    <div class="head rv"><span class="eyebrow">Exemplos do dia a dia</span><h2>O que os números <span class="grad">revelam</span>.</h2>
+      <p class="sub">Situações comuns em pequenos negócios, com números ilustrativos, para mostrar como a clareza muda a decisão.</p></div>
+    <div class="cases">
+      <div class="card case rv" id="c1">
+        <small>Pizzaria</small>
+        <div class="num">R$ <span data-n="15000">0</span></div>
+        <div style="color:var(--mut)">vendidos no mês. Sobraram só <b style="color:#fff">19%</b>.</div>
+        <div class="stack" id="stk"><i style="--w:38%;background:#ff7100"></i><i style="--w:22%;background:#f32800"></i><i style="--w:12%;background:#7f5af0"></i><i style="--w:9%;background:#3b82f6"></i><i style="--w:19%;background:#2bd67b"></i></div>
+        <div class="leg"><span><b style="background:#ff7100"></b>Ingredientes 38%</span><span><b style="background:#f32800"></b>Equipe 22%</span><span><b style="background:#7f5af0"></b>Aluguel e contas 12%</span><span><b style="background:#3b82f6"></b>Taxas e embalagem 9%</span><span><b style="background:#2bd67b"></b>Sobra 19%</span></div>
+      </div>
+      <div class="card case rv d1">
+        <small>Preço de um produto</small>
+        <div class="num"><span data-n="28">0</span>%</div>
+        <div style="color:var(--mut)">de margem real. Custo R$ 18, venda R$ 30, taxa de 12%: sobram <b style="color:#fff">R$ 8,40</b> por unidade.</div>
+      </div>
+      <div class="card case rv d2">
+        <small>Fiado</small>
+        <div class="num">R$ <span data-n="1480">0</span></div>
+        <div style="color:var(--mut)">esquecidos no caderno. Com as contas a receber listadas, você vê quem deve e há quantos dias.</div>
+      </div>
+    </div>
+    <p class="note">Exemplos ilustrativos com números fictícios. Não representam clientes reais nem garantem resultados.</p>
+  </div>
+</section>
+
+<section>
+  <div class="w">
+    <div class="nums">
+      <div class="card rv"><strong><span data-n="0">0</span></strong><span>mensalidade</span></div>
+      <div class="card rv d1"><strong><span data-n="100">0</span>%</strong><span>dos dados no seu aparelho</span></div>
+      <div class="card rv d2"><strong><span data-n="10">0</span></strong><span>tipos de negócio prontos</span></div>
+      <div class="card rv d2"><strong><span data-n="3">0</span> min</strong><span>para começar a usar</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="duvidas">
+  <div class="w" style="max-width:860px">
+    <div class="head rv"><span class="eyebrow">Dúvidas</span><h2>Perguntas <span class="grad">frequentes</span></h2></div>
+    <div class="rv">
+      <details><summary>A Bumerân é um banco ou um escritório contábil?</summary><p>Não. A Bumerân oferece educação e ferramentas de organização. Nada aqui substitui um contador nem é orientação fiscal ou de investimento.</p></details>
+      <details><summary>Onde ficam os meus dados?</summary><p>Somente no seu celular. Nenhum dado seu é enviado para servidores. Por isso o aplicativo tem backup: baixe um de vez em quando e guarde com você.</p></details>
+      <details><summary>Preciso de internet?</summary><p>Só para instalar. Depois o aplicativo funciona sem conexão.</p></details>
+      <details><summary>Funciona em iPhone e Android?</summary><p>Sim. É só abrir o link e adicionar à tela inicial, pelo Chrome (Android) ou pelo Safari (iPhone).</p></details>
+      <details><summary>Tem mensalidade?</summary><p>Os aplicativos são pagamento único. Existe um acompanhamento mensal opcional, que é um serviço à parte.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="w rv">
+    <h2>Pronto para saber <span class="grad">quanto sobra</span>?</h2>
+    <p class="sub">Teste a demonstração do Meu Painel do Dono agora, no seu celular, sem cadastro.</p>
+    <div class="cta"><a class="btn" href="financas/">Testar o Meu Painel do Dono</a><a class="btn g" id="wa" href="#" hidden>Falar no WhatsApp</a></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="w fg">
+    <div>
+      <a class="brand" href="#topo" style="margin-bottom:12px"><img src="assets/logo-mark.png" alt="">Bumerân</a>
+      <p style="margin:0;max-width:520px">Educação financeira e ferramentas para pequenos negócios. A Bumerân não é banco, instituição financeira, escritório contábil nem auditoria, e nada neste site substitui um contador ou oferece recomendação de investimento.</p>
+    </div>
+    <div>
+      <p style="margin:0 0 6px"><a href="financas/">Meu Painel do Dono</a></p>
+      <p style="margin:0 0 6px"><a href="financas/calculadora/">Calculadora grátis</a></p>
+      <p style="margin:0 0 6px"><a href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">Instagram @bumeran_edu</a></p>
+      <p style="margin:14px 0 0">© 2026 Bumerân</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+var WHATSAPP = ""; // número com DDI e DDD, só dígitos. Ex.: 5511999999999
+(function () {
+  var wa = document.getElementById("wa");
+  if (WHATSAPP) { wa.hidden = false; wa.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Vim pelo site da Bumerân."); wa.target = "_blank"; wa.rel = "noopener"; }
+  var hd = document.getElementById("hd");
+  function sc() { hd.classList.toggle("s", window.scrollY > 24); } sc(); addEventListener("scroll", sc, { passive: true });
+  var nichos = ["Pizzaria", "Barbearia", "Lanchonete", "Salão de beleza", "Padaria", "Loja de roupa", "Lava-rápido", "Pet shop", "Autônomos", "Comércio em geral"];
+  var mq = document.getElementById("mq");
+  mq.innerHTML = nichos.concat(nichos).map(function (n) { return "<span>" + n + "</span>"; }).join("");
+  var fmt = function (n) { return n.toLocaleString("pt-BR"); };
+  function count(el) {
+    var to = +el.dataset.n, t0 = null, dur = 1400;
+    if (to === 0 || matchMedia("(prefers-reduced-motion:reduce)").matches) { el.textContent = fmt(to); return; }
+    function st(t) { if (!t0) t0 = t; var p = Math.min(1, (t - t0) / dur); el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(st); }
+    requestAnimationFrame(st);
+  }
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add("in");
+      e.target.querySelectorAll("[data-n]").forEach(count);
+      var s = e.target.querySelector(".stack"); if (s) s.classList.add("go");
+      io.unobserve(e.target);
+    });
+  }, { threshold: .18 });
+  document.querySelectorAll(".rv").forEach(function (x) { io.observe(x); });
+  var shot = document.getElementById("shot");
+  document.querySelectorAll("#tabs button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("#tabs button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on"); shot.style.opacity = .2;
+      setTimeout(function () { shot.src = b.dataset.i; shot.style.opacity = 1; }, 160);
+    });
+  });
+  shot.style.transition = "opacity .2s";
+})();
+</script>
 </body>
 </html>
