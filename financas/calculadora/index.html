@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calculadora Lucro Pizza</title>
+<title>Calculadora de lucro | Bumerân</title>
 <style>
   :root { --bg:#f6f4ef; --card:#fff; --text:#1f2430; --muted:#5f6675; --primary:#b23a2e; --line:#e4e0d6; --ok:#1e7a4c; --bad:#c0392b; }
   @media (prefers-color-scheme: dark) {
@@ -31,25 +31,25 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Quanto sobra de verdade na sua pizza?</h1>
-  <p class="sub">Preencha os números de uma pizza e compare o lucro vendendo no aplicativo e vendendo direto (WhatsApp, balcão). Os valores já preenchidos são só exemplo: troque pelos seus.</p>
+  <h1>Quanto sobra de verdade no que você vende?</h1>
+  <p class="sub">Preencha os números de uma unidade do seu produto ou serviço e compare o lucro vendendo por aplicativo ou plataforma e vendendo direto (WhatsApp, balcão). Os valores já preenchidos são só exemplo: troque pelos seus.</p>
 
   <div class="card">
     <div class="row">
-      <div><label for="preco">Preço de venda no app (R$)</label><input id="preco" type="number" inputmode="decimal" step="0.01" value="50"></div>
-      <div><label for="custo">Custo dos ingredientes (R$)</label><input id="custo" type="number" inputmode="decimal" step="0.01" value="15"></div>
+      <div><label for="preco">Preço de venda na plataforma/app (R$)</label><input id="preco" type="number" inputmode="decimal" step="0.01" value="50"></div>
+      <div><label for="custo">Custo do material ou ingredientes (R$)</label><input id="custo" type="number" inputmode="decimal" step="0.01" value="15"></div>
     </div>
     <div class="row">
       <div><label for="emb">Embalagem (R$)</label><input id="emb" type="number" inputmode="decimal" step="0.01" value="2.5"></div>
       <div><label for="fixo">Custos fixos por pedido (R$)</label><input id="fixo" type="number" inputmode="decimal" step="0.01" value="3"></div>
     </div>
     <div class="row">
-      <div><label for="app">Taxa do aplicativo (%)</label><input id="app" type="number" inputmode="decimal" step="0.1" value="12"></div>
+      <div><label for="app">Taxa da plataforma/app (%)</label><input id="app" type="number" inputmode="decimal" step="0.1" value="12"></div>
       <div><label for="pag">Taxa de pagamento online (%)</label><input id="pag" type="number" inputmode="decimal" step="0.1" value="3.5"></div>
     </div>
     <div class="row">
       <div><label for="imp">Impostos (%)</label><input id="imp" type="number" inputmode="decimal" step="0.1" value="4"></div>
-      <div><label for="entApp">Entrega paga por você no app (R$)</label><input id="entApp" type="number" inputmode="decimal" step="0.01" value="0"></div>
+      <div><label for="entApp">Entrega paga por você na plataforma (R$)</label><input id="entApp" type="number" inputmode="decimal" step="0.01" value="0"></div>
     </div>
     <div class="row">
       <div><label for="precoDir">Preço na venda direta (R$)</label><input id="precoDir" type="number" inputmode="decimal" step="0.01" value="50"></div>
@@ -65,10 +65,10 @@
 
   <div class="res" id="res">
     <div class="card">
-      <div class="box"><div class="t">Lucro por pizza vendida no aplicativo</div><div class="v" id="lApp"></div><div class="note" id="mApp"></div></div>
-      <div class="box"><div class="t">Lucro por pizza vendida direto</div><div class="v" id="lDir"></div><div class="note" id="mDir"></div></div>
-      <div class="box"><div class="t">Diferença por pizza (direto menos app)</div><div class="v" id="dif"></div></div>
-      <div class="box"><div class="t">Preço mínimo no app para atingir sua margem desejada</div><div class="v" id="minimo"></div></div>
+      <div class="box"><div class="t">Lucro por unidade vendida na plataforma</div><div class="v" id="lApp"></div><div class="note" id="mApp"></div></div>
+      <div class="box"><div class="t">Lucro por unidade vendida direto</div><div class="v" id="lDir"></div><div class="note" id="mDir"></div></div>
+      <div class="box"><div class="t">Diferença por unidade (direto menos plataforma)</div><div class="v" id="dif"></div></div>
+      <div class="box"><div class="t">Preço mínimo na plataforma para atingir sua margem desejada</div><div class="v" id="minimo"></div></div>
       <p class="note" id="aviso"></p>
       <p class="note">Estimativa simples. Não considera cupom, desconto bancado por você, taxa de saque nem regime tributário. Confirme suas taxas reais com o aplicativo e com seu contador.</p>
     </div>
@@ -123,7 +123,7 @@ if (typeof document !== "undefined") {
     $("mDir").textContent = pct(r.margemDir);
     $("dif").textContent = fmt.format(r.diferenca); cor($("dif"), r.diferenca);
     $("minimo").textContent = r.minimo === null ? "Ajuste as taxas" : fmt.format(r.minimo);
-    $("aviso").textContent = r.lucroApp < 0 ? "Atenção: nesse preço você tem prejuízo em cada pizza vendida no aplicativo." : "";
+    $("aviso").textContent = r.lucroApp < 0 ? "Atenção: nesse preço você tem prejuízo em cada unidade vendida na plataforma." : "";
     $("res").style.display = "block";
     $("res").scrollIntoView({ behavior: "smooth", block: "start" });
   }

@@ -147,7 +147,7 @@ footer a{color:var(--mut);text-decoration:none}
       <p class="sub">O Meu Painel do Dono mostra, no seu celular, o que entrou, o que saiu e o que realmente ficou. Sem planilha complicada, sem mensalidade.</p>
       <div class="cta">
         <a class="btn" href="#planos">Ver planos e preços</a>
-        <a class="btn g" href="calculadora/">Calculadora grátis da pizza</a>
+        <a class="btn g" href="calculadora/">Calculadora grátis de lucro</a>
       </div>
       <div class="trust"><span>Pagamento único</span><span>Pix ou cartão</span><span>Dados só no seu celular</span><span>Funciona sem internet</span></div>
     </div>
@@ -301,7 +301,7 @@ footer a{color:var(--mut);text-decoration:none}
   <div class="w rv">
     <h2>Chega de adivinhar <span class="grad">quanto sobrou</span>.</h2>
     <p class="sub">Veja os planos, pague com Pix ou cartão e use ainda hoje no seu celular. Garantia de 7 dias.</p>
-    <div class="cta"><a class="btn" href="#planos">Ver planos</a><a class="btn g" href="calculadora/">Calculadora grátis da pizza</a></div>
+    <div class="cta"><a class="btn" href="#planos">Ver planos</a><a class="btn g" href="calculadora/">Calculadora grátis de lucro</a></div>
   </div>
 </section>
 
@@ -328,7 +328,7 @@ var NOMES = { basico: "Básico", avancado: "Avançado", premium: "Premium", raio
       var p = b.getAttribute("data-buy");
       if (CHECKOUT[p]) { location.href = CHECKOUT[p]; return; }
       if (WHATSAPP) { location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Quero o Meu Painel do Dono, plano " + NOMES[p] + "."); return; }
-      aviso("Compra disponível em breve. Enquanto isso, experimente a calculadora grátis da pizza.");
+      aviso("Compra disponível em breve. Enquanto isso, experimente a calculadora grátis de lucro.");
     });
   });
   var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { threshold: .15 });
