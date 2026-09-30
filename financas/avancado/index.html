@@ -110,6 +110,7 @@
    INSTAGRAM_URL: endereço do perfil da Bumerân. Vazio = botão escondido. */
 var EDICAO = "avancado";
 var CONTATO_WHATSAPP = "";
+var LIC_PUB = {"key_ops":["verify"],"ext":true,"kty":"EC","x":"D9srLTHIDvM2YYzAWvKd52wMGhVrE9diwD5IZQ4EZKs","y":"NmqAnYHAutPxr4-1RmVzP0f0XUf4J6NqEEcA-LaeRZE","crv":"P-256"}; /* chave pública de verificação (injetada no build) */
 var INSTAGRAM_URL = "";
 var AV = EDICAO === "avancado";
 var CHAVE = "painel_dono_" + EDICAO + "_v1";
@@ -339,8 +340,28 @@ function validarBackup(obj) {
            config: { negocio: String(cfg.negocio || "").slice(0, 60), nicho: NICHOS[cfg.nicho] ? cfg.nicho : "geral",
                      tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta } };
 }
+
+/* ---------- Licença (ativação por código assinado) ---------- */
+function b64uBytes(s) { s = String(s).replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+function subtleC() { if (typeof crypto !== "undefined" && crypto.subtle) return crypto.subtle; if (typeof require !== "undefined") return require("crypto").webcrypto.subtle; return null; }
+function verificarLicenca(code, edicao, pub) {
+  try {
+    var st = subtleC(); if (!st || !pub) return Promise.resolve({ ok: false, erro: "sem-crypto" });
+    var partes = String(code || "").trim().split(".");
+    if (partes.length !== 2) return Promise.resolve({ ok: false, erro: "formato" });
+    var payloadBytes = b64uBytes(partes[0]), sig = b64uBytes(partes[1]);
+    return st.importKey("jwk", pub, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]).then(function (k) {
+      return st.verify({ name: "ECDSA", hash: "SHA-256" }, k, sig, payloadBytes);
+    }).then(function (ok) {
+      if (!ok) return { ok: false, erro: "assinatura" };
+      var o = JSON.parse(new TextDecoder().decode(payloadBytes));
+      if (!o || typeof o.i !== "string" || o.e !== (edicao === "avancado" ? "a" : "b")) return { ok: false, erro: "edicao" };
+      return { ok: true, payload: o };
+    }).catch(function () { return { ok: false, erro: "formato" }; });
+  } catch (e) { return Promise.resolve({ ok: false, erro: "formato" }); }
+}
 if (typeof module !== "undefined") {
-  module.exports = { resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
+  module.exports = { verificarLicenca: verificarLicenca, resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
                      shiftYM: shiftYM, validarBackup: validarBackup, NICHOS: NICHOS, categoriasDe: categoriasDe,
                      novaCategoria: novaCategoria, textoResumo: textoResumo, ehFixo: ehFixo, addDias: addDias, diasEntre: diasEntre,
                      fixosBase: fixosBase, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo,
@@ -386,7 +407,7 @@ if (typeof document !== "undefined") {
   function pctTxt(x) { return (x * 100).toFixed(1).replace(".", ",") + "%"; }
 
   var S = { dados: carregar(), view: "inicio", ym: hoje().slice(0, 7), tipo: "e", ano: hoje().slice(0, 4), confirma: null, toast: "",
-            novaCat: false, contaTipo: "p", pagando: null, precEdit: null };
+            novaCat: false, contaTipo: "p", pagando: null, precEdit: null, lic: { estado: "checando" } };
   var app = document.getElementById("app");
 
   function el(tag, props, kids) {
@@ -663,11 +684,24 @@ if (typeof document !== "undefined") {
   }
 
   /* ---------- Preços (Avançado) ---------- */
+  var EXPRECO = {
+    pizzaria: ["Pizza de mussarela grande", "Massa, molho, queijo", "Caixa, gás do forno, entrega"],
+    lanchonete: ["X-burguer", "Pão, carne, queijo, salada", "Embalagem, sachês, entrega"],
+    barbearia: ["Corte masculino", "Produtos usados no corte", "Toalha, lâmina, desinfecção"],
+    salao: ["Unha em gel", "Gel, lixa, esmalte", "Algodão, álcool, embalagem"],
+    padaria: ["Bolo de chocolate (1 kg)", "Farinha, ovos, chocolate", "Forma, caixa, gás"],
+    roupa: ["Blusa de alça", "Quanto pagou na peça", "Etiqueta, sacola, frete"],
+    lavarapido: ["Lavagem completa de carro", "Shampoo, cera, produtos", "Água, panos, sacos de lixo"],
+    pet: ["Banho e tosa (porte médio)", "Shampoo, perfume, lâmina", "Toalha, água, luvas"],
+    autonomo: ["Manutenção de ar-condicionado", "Peças e materiais do serviço", "Deslocamento, ferramentas"],
+    geral: ["Bolo de pote, unha em gel, conserto de celular...", "Material usado em 1 unidade", "Embalagem, entrega, taxas"]
+  };
+  function exPreco() { return EXPRECO[S.dados.config.nicho] || EXPRECO.geral; }
   function viewPrecos() {
     var ed = S.precEdit || { id: null, nome: "", c: 0, o: 0, r: 0, t: 0, m: 20, p: 0 };
     var kids = titulo("Preços");
     kids.push(el("p", { class: "sub", text: "Descubra o preço certo para não perder dinheiro. Preencha para uma unidade do produto ou serviço." }));
-    var fNome = el("input", { id: "p-nome", type: "text", maxlength: "60", placeholder: "Ex.: Pizza de calabresa grande", value: ed.nome });
+    var fNome = el("input", { id: "p-nome", type: "text", maxlength: "60", placeholder: "Ex.: " + exPreco()[0], value: ed.nome });
     var fC = el("input", { id: "p-c", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.c), autocomplete: "off" });
     var fO = el("input", { id: "p-o", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.o), autocomplete: "off" });
     var fR = el("input", { id: "p-r", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.r), autocomplete: "off" });
@@ -710,8 +744,8 @@ if (typeof document !== "undefined") {
     }
     kids.push(el("div", { class: "card" }, [
       el("label", { for: "p-nome", text: "Nome do produto ou serviço" }), fNome,
-      el("label", { for: "p-c", text: "Quanto custa fazer 1 unidade? (ingredientes ou material)" }), fC,
-      el("label", { for: "p-o", text: "Outros custos de cada unidade (embalagem, entrega...)" }), fO,
+      el("label", { for: "p-c", text: "Quanto custa fazer 1 unidade? (" + exPreco()[1].toLowerCase() + ")" }), fC,
+      el("label", { for: "p-o", text: "Outros custos de cada unidade (" + exPreco()[2].toLowerCase() + "...)" }), fO,
       el("label", { for: "p-r", text: "Parte dos custos fixos em cada unidade" }), fR,
       el("div", { class: "hint", text: "Aluguel, luz, salários e outros gastos que existem mesmo sem vender, divididos pelas unidades que você vende no mês." }),
       el("div", { class: "grid2", style: "margin-top:8px" }, [fUn, el("button", { class: "btn sec", style: "margin-top:0", text: "Calcular pelo meu caixa", onclick: function () {
@@ -978,7 +1012,7 @@ if (typeof document !== "undefined") {
       if (INSTAGRAM_URL) fb.appendChild(el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", target: "_blank", rel: "noopener", href: INSTAGRAM_URL, text: "Conteúdo de finanças para empresários" }));
       kids.push(fb);
     }
-    if (location.hash === "#demo") {
+    if (S.lic.payload && S.lic.payload.m) {
       kids.push(el("div", { class: "card" }, [el("h2", { text: "Demonstração" }),
         el("button", { class: "btn sec", text: "Carregar dados de exemplo", onclick: demo }),
         el("p", { class: "hint", text: "Os dados de exemplo substituem os lançamentos atuais. Use só para conhecer o aplicativo." })]));
@@ -995,6 +1029,58 @@ if (typeof document !== "undefined") {
     return el("div", null, kids);
   }
 
+
+  /* ---------- Licença (tela de ativação) ---------- */
+  var LK = "painel_lic_" + EDICAO, LREV = "painel_rev_" + EDICAO;
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function extrairCodigo(t) { t = String(t || "").trim(); var m = t.match(/[#&?]k=([A-Za-z0-9_\-.]+)/); return m ? m[1] : t.replace(/\s+/g, ""); }
+  function checarRevogada(o) {
+    if (typeof fetch !== "function") return;
+    fetch("../../revogados.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !Array.isArray(j.ids)) return;
+      if (j.ids.indexOf(o.i) >= 0) { lsSet(LREV, o.i); if (S.lic.estado !== "revogada") { S.lic = { estado: "revogada", payload: o }; render(); } }
+      else if (lsGet(LREV) === o.i) { try { localStorage.removeItem(LREV); } catch (e) {} }
+    }).catch(function () {});
+  }
+  function ativar(code, manual) {
+    return verificarLicenca(code, EDICAO, LIC_PUB).then(function (r) {
+      if (!r.ok) { S.lic = { estado: "sem", erro: manual ? (r.erro === "edicao" ? "Este código é de outra versão do aplicativo. Confira se você abriu o link certo." : "Código inválido. Confira se copiou o código inteiro, sem cortar o começo ou o fim.") : "" }; render(); return false; }
+      lsSet(LK, String(code).trim());
+      if (lsGet(LREV) === r.payload.i) { S.lic = { estado: "revogada", payload: r.payload }; render(); checarRevogada(r.payload); return false; }
+      S.lic = { estado: "ok", payload: r.payload }; render(); checarRevogada(r.payload); return true;
+    });
+  }
+  function licIniciar() {
+    var h = location.hash, m = h.match(/[#&]k=([A-Za-z0-9_\-.]+)/), code = null;
+    if (m) { code = m[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+    else code = lsGet(LK);
+    if (!code) { S.lic = { estado: "sem", erro: "" }; render(); return; }
+    ativar(code, !!m);
+  }
+  function viewLicenca() {
+    var rev = S.lic.estado === "revogada";
+    var kids = [el("div", { class: "top" }, [el("div", { class: "logo", text: "🔑" }), el("div", null, [el("h1", { text: "Meu Painel do Dono" }), el("div", { class: "sub", text: AV ? "Versão Avançado" : "Versão Básico" })])])];
+    if (rev) {
+      kids.push(el("div", { class: "card" }, [el("h2", { text: "Licença desativada" }),
+        el("p", { class: "sub", text: "O acesso a este aplicativo foi encerrado (por exemplo, por devolução da compra). Seus dados continuam só no seu celular: baixe uma cópia antes de sair." }),
+        el("button", { class: "btn sec", text: "Baixar meus dados (backup)", onclick: function () {
+          var raw = lsGet(CHAVE); if (!raw) { aviso("Não há dados neste aparelho"); return; }
+          baixar("meu-painel-backup.json", raw, "application/json");
+        } })]));
+    } else {
+      var inp = el("input", { id: "lic-code", type: "text", placeholder: "Cole aqui o código de ativação", autocomplete: "off", autocapitalize: "off", spellcheck: "false" });
+      kids.push(el("div", { class: "card" }, [el("h2", { text: "Ative o seu aplicativo" }),
+        el("p", { class: "sub", text: "Depois da compra você recebe um link pessoal de ativação. Basta abrir o link uma vez neste aparelho. Se preferir, cole o código abaixo." }),
+        inp,
+        S.lic.erro ? el("div", { class: "tip", text: S.lic.erro }) : el("span"),
+        el("button", { class: "btn", text: "Ativar", onclick: function () { ativar(extrairCodigo(inp.value), true); } }),
+        el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", href: "../", text: "Ver planos e comprar" })]));
+    }
+    if (CONTATO_WHATSAPP) kids.push(el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", target: "_blank", rel: "noopener",
+      href: "https://wa.me/" + CONTATO_WHATSAPP + "?text=" + encodeURIComponent("Oi! Preciso de ajuda com a ativação do Meu Painel do Dono."), text: "Falar com a Bumerân" }));
+    return el("div", null, kids);
+  }
   var TABS = AV
     ? [["inicio", "Início"], ["hist", "Histórico"], ["contas", "Contas"], ["lancar", "Lançar"], ["precos", "Preços"], ["painel", "Painel"], ["mais", "Mais"]]
     : [["inicio", "Início"], ["hist", "Histórico"], ["lancar", "Lançar"], ["painel", "Painel"], ["mais", "Mais"]];
@@ -1004,6 +1090,13 @@ if (typeof document !== "undefined") {
     var tabs = document.getElementById("tabs"), tin = document.getElementById("tabsin");
     tin.textContent = ""; tin.style.gridTemplateColumns = "repeat(" + TABS.length + ",1fr)";
     aplicarTema();
+    if (S.lic.estado !== "ok") {
+      tabs.style.display = "none";
+      if (S.lic.estado === "checando") { app.appendChild(el("p", { class: "sub", style: "text-align:center;margin-top:40vh", text: "Carregando..." })); return; }
+      app.appendChild(viewLicenca());
+      if (S.toast) app.appendChild(el("div", { class: "toast noprint", text: S.toast }));
+      return;
+    }
     if (!S.dados) { tabs.style.display = "none"; app.appendChild(viewOnboarding()); return; }
     tabs.style.display = "block";
     TABS.forEach(function (t) {
@@ -1024,6 +1117,7 @@ if (typeof document !== "undefined") {
   }
   window.__painel = S;
   render();
+  licIniciar();
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
     navigator.serviceWorker.register("sw.js").catch(function () {});
   }

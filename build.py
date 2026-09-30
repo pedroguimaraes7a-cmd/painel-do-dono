@@ -3,6 +3,10 @@ from PIL import Image
 import numpy as np, colorsys
 SRC="/home/claude/painel_src/src.html"; OLD="/home/claude/painel"
 src=open(SRC,encoding="utf-8").read()
+PUB=open("/home/claude/privado/licenca-publica.json").read().strip()
+PUB=json.dumps(json.loads(PUB),separators=(",",":"))
+assert "var LIC_PUB = null;" in src
+src=src.replace("var LIC_PUB = null;","var LIC_PUB = "+PUB+";",1)
 ED={"basico":dict(title="Meu Painel do Dono",short="Meu Painel",theme="#a8322a",v="painel-basico-v1"),
     "avancado":dict(title="Meu Painel do Dono Avançado",short="Painel Av.",theme="#1f3a68",v="painel-avancado-v1")}
 def tint(im):
