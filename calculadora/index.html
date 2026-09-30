@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora Lucro Pizza</title>
+<style>
+  :root { --bg:#f6f4ef; --card:#fff; --text:#1f2430; --muted:#5f6675; --primary:#b23a2e; --line:#e4e0d6; --ok:#1e7a4c; --bad:#c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#16181d; --card:#20232b; --text:#eceef3; --muted:#a0a7b6; --primary:#f08a7d; --line:#333846; --ok:#5fd39a; --bad:#ff8a7a; }
+  }
+  :root[data-theme="dark"] { --bg:#16181d; --card:#20232b; --text:#eceef3; --muted:#a0a7b6; --primary:#f08a7d; --line:#333846; --ok:#5fd39a; --bad:#ff8a7a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,Helvetica,sans-serif; line-height:1.4; }
+  .wrap { max-width:640px; margin:0 auto; padding:16px; }
+  h1 { font-size:22px; margin:8px 0 4px; color:var(--primary); }
+  .sub { color:var(--muted); font-size:14px; margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
+  input { width:100%; padding:12px; font-size:16px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  button { width:100%; margin-top:16px; padding:14px; font-size:16px; font-weight:bold; border:0; border-radius:10px; background:var(--primary); color:#fff; cursor:pointer; }
+  .res { display:none; }
+  .box { border-radius:10px; padding:14px; background:var(--bg); margin-bottom:10px; }
+  .box .t { font-size:12px; color:var(--muted); }
+  .box .v { font-size:22px; font-weight:bold; margin-top:2px; }
+  .pos { color:var(--ok); } .neg { color:var(--bad); }
+  .note { font-size:12px; color:var(--muted); }
+  .err { color:var(--bad); font-size:14px; margin-top:12px; display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Quanto sobra de verdade na sua pizza?</h1>
+  <p class="sub">Preencha os números de uma pizza e compare o lucro vendendo no aplicativo e vendendo direto (WhatsApp, balcão). Os valores já preenchidos são só exemplo: troque pelos seus.</p>
+
+  <div class="card">
+    <div class="row">
+      <div><label for="preco">Preço de venda no app (R$)</label><input id="preco" type="number" inputmode="decimal" step="0.01" value="50"></div>
+      <div><label for="custo">Custo dos ingredientes (R$)</label><input id="custo" type="number" inputmode="decimal" step="0.01" value="15"></div>
+    </div>
+    <div class="row">
+      <div><label for="emb">Embalagem (R$)</label><input id="emb" type="number" inputmode="decimal" step="0.01" value="2.5"></div>
+      <div><label for="fixo">Custos fixos por pedido (R$)</label><input id="fixo" type="number" inputmode="decimal" step="0.01" value="3"></div>
+    </div>
+    <div class="row">
+      <div><label for="app">Taxa do aplicativo (%)</label><input id="app" type="number" inputmode="decimal" step="0.1" value="12"></div>
+      <div><label for="pag">Taxa de pagamento online (%)</label><input id="pag" type="number" inputmode="decimal" step="0.1" value="3.5"></div>
+    </div>
+    <div class="row">
+      <div><label for="imp">Impostos (%)</label><input id="imp" type="number" inputmode="decimal" step="0.1" value="4"></div>
+      <div><label for="entApp">Entrega paga por você no app (R$)</label><input id="entApp" type="number" inputmode="decimal" step="0.01" value="0"></div>
+    </div>
+    <div class="row">
+      <div><label for="precoDir">Preço na venda direta (R$)</label><input id="precoDir" type="number" inputmode="decimal" step="0.01" value="50"></div>
+      <div><label for="taxaDir">Taxa na venda direta (%)</label><input id="taxaDir" type="number" inputmode="decimal" step="0.1" value="2"></div>
+    </div>
+    <div class="row">
+      <div><label for="entDir">Entrega na venda direta (R$)</label><input id="entDir" type="number" inputmode="decimal" step="0.01" value="5"></div>
+      <div><label for="alvo">Margem de lucro desejada (%)</label><input id="alvo" type="number" inputmode="decimal" step="0.1" value="20"></div>
+    </div>
+    <button id="calc" type="button">Calcular</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="res" id="res">
+    <div class="card">
+      <div class="box"><div class="t">Lucro por pizza vendida no aplicativo</div><div class="v" id="lApp"></div><div class="note" id="mApp"></div></div>
+      <div class="box"><div class="t">Lucro por pizza vendida direto</div><div class="v" id="lDir"></div><div class="note" id="mDir"></div></div>
+      <div class="box"><div class="t">Diferença por pizza (direto menos app)</div><div class="v" id="dif"></div></div>
+      <div class="box"><div class="t">Preço mínimo no app para atingir sua margem desejada</div><div class="v" id="minimo"></div></div>
+      <p class="note" id="aviso"></p>
+      <p class="note">Estimativa simples. Não considera cupom, desconto bancado por você, taxa de saque nem regime tributário. Confirme suas taxas reais com o aplicativo e com seu contador.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcular(p) {
+  var taxasApp = (p.app + p.pag + p.imp) / 100;
+  var custoApp = p.custo + p.emb + p.entApp + p.fixo;
+  var lucroApp = p.preco * (1 - taxasApp) - custoApp;
+  var custoDir = p.custo + p.emb + p.entDir + p.fixo;
+  var lucroDir = p.precoDir * (1 - (p.taxaDir + p.imp) / 100) - custoDir;
+  var denom = 1 - taxasApp - p.alvo / 100;
+  var minimo = denom > 0 ? custoApp / denom : null;
+  return {
+    lucroApp: lucroApp,
+    margemApp: p.preco > 0 ? lucroApp / p.preco : null,
+    lucroDir: lucroDir,
+    margemDir: p.precoDir > 0 ? lucroDir / p.precoDir : null,
+    diferenca: lucroDir - lucroApp,
+    minimo: minimo,
+    custoApp: custoApp
+  };
+}
+if (typeof module !== "undefined") { module.exports = { calcular: calcular }; }
+
+if (typeof document !== "undefined") {
+  var fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  var $ = function (id) { return document.getElementById(id); };
+  var ids = ["preco","custo","emb","fixo","app","pag","imp","entApp","precoDir","taxaDir","entDir","alvo"];
+  function pct(x) { return x === null ? "-" : (x * 100).toFixed(1).replace(".", ",") + "% de margem"; }
+  function cor(el, v) { el.className = "v " + (v < 0 ? "neg" : "pos"); }
+  function rodar() {
+    var p = {};
+    var ok = true;
+    ids.forEach(function (id) {
+      var v = parseFloat($(id).value);
+      if (isNaN(v) || v < 0) ok = false;
+      p[id] = v;
+    });
+    var err = $("err");
+    if (!ok || !(p.preco > 0) || !(p.precoDir > 0)) {
+      err.textContent = "Confira os campos: todos precisam de número igual ou maior que zero, e os preços de venda maiores que zero.";
+      err.style.display = "block"; $("res").style.display = "none"; return;
+    }
+    err.style.display = "none";
+    var r = calcular(p);
+    $("lApp").textContent = fmt.format(r.lucroApp); cor($("lApp"), r.lucroApp);
+    $("mApp").textContent = pct(r.margemApp);
+    $("lDir").textContent = fmt.format(r.lucroDir); cor($("lDir"), r.lucroDir);
+    $("mDir").textContent = pct(r.margemDir);
+    $("dif").textContent = fmt.format(r.diferenca); cor($("dif"), r.diferenca);
+    $("minimo").textContent = r.minimo === null ? "Ajuste as taxas" : fmt.format(r.minimo);
+    $("aviso").textContent = r.lucroApp < 0 ? "Atenção: nesse preço você tem prejuízo em cada pizza vendida no aplicativo." : "";
+    $("res").style.display = "block";
+    $("res").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  $("calc").addEventListener("click", rodar);
+}
+</script>
+</body>
+</html>
