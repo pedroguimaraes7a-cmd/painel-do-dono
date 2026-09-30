@@ -463,11 +463,27 @@ if (typeof document !== "undefined") {
     ]);
   }
   function mini(t, v, cls) { return el("div", { class: "mini" }, [el("div", { class: "t", text: t }), el("div", { class: "v " + (cls || ""), text: v })]); }
+
+  /* exemplos por nicho: nome do negócio, observação de gasto, categoria própria, conta a pagar, conta a receber */
+  var EXN = {
+    pizzaria:   ["Pizzaria do João", "compra de queijo no atacado", "Manutenção do forno", "Aluguel, fornecedor de queijo", "Fiado, encomenda de 10 pizzas"],
+    lanchonete: ["Lanche do Zé", "compra de carne no atacado", "Manutenção da chapa", "Aluguel, fornecedor de pães", "Fiado, pedido da empresa"],
+    barbearia:  ["Barbearia do Marcos", "compra de lâminas e pomada", "Afiação das máquinas", "Aluguel, fornecedor de produtos", "Fiado, pacote do cliente"],
+    salao:      ["Studio da Ana", "compra de esmaltes e gel", "Manutenção da cabine de unha", "Aluguel, fornecedor de cosméticos", "Fiado, pacote de noiva"],
+    padaria:    ["Padaria Pão Quente", "compra de farinha e ovos", "Manutenção do forno", "Aluguel, fornecedor de farinha", "Fiado, encomenda de bolo"],
+    roupa:      ["Boutique da Carla", "compra de peças no atacado", "Manutenção das araras e vitrine", "Aluguel, fornecedor de roupas", "Fiado, cliente parcelado"],
+    lavarapido: ["Lava Rápido do Paulo", "compra de shampoo e cera", "Manutenção da lavadora", "Aluguel, conta de água", "Fiado, frota de empresa"],
+    pet:        ["Pet Shop do Rafa", "compra de ração e shampoo", "Manutenção da banheira e secador", "Aluguel, fornecedor de ração", "Fiado, pacote de banhos"],
+    autonomo:   ["Ar Frio Serviços", "compra de peças e gás", "Manutenção das ferramentas", "Combustível, fornecedor de peças", "Fiado, serviço já feito"],
+    geral:      ["Meu Negócio", "compra de material", "Manutenção de equipamento", "Aluguel, fornecedor", "Fiado, encomenda de cliente"]
+  };
+  function exN(i) { var k = S.dados ? S.dados.config.nicho : "geral"; return (EXN[k] || EXN.geral)[i]; }
   function titulo(t) { return [el("h1", { text: t }), el("div", { style: "height:12px" })]; }
 
   function viewOnboarding() {
-    var nome = el("input", { id: "ob-nome", type: "text", maxlength: "60", placeholder: "Ex.: Pizzaria do João" });
+    var nome = el("input", { id: "ob-nome", type: "text", maxlength: "60", placeholder: "Ex.: " + EXN.pizzaria[0] });
     var sel = el("select", { id: "ob-nicho" }, Object.keys(NICHOS).map(function (k) { return el("option", { value: k, text: NICHOS[k].emoji + "  " + NICHOS[k].nome }); }));
+    sel.addEventListener("change", function () { nome.setAttribute("placeholder", "Ex.: " + (EXN[sel.value] || EXN.geral)[0]); });
     return el("div", null, [
       el("div", { class: "welcome" }, [el("div", { class: "logo", text: "💰" }), el("h1", { text: "Meu Painel do Dono" + (AV ? " Avançado" : "") }),
         el("p", { class: "sub", text: "Veja o que entrou, o que saiu e quanto sobrou de verdade no seu negócio. Seus dados ficam só neste aparelho." })]),
@@ -527,9 +543,9 @@ if (typeof document !== "undefined") {
     var sel = el("select", { id: "f-cat" }, opts);
     if (S.novaCat) sel.value = "novo";
     var data = el("input", { id: "f-data", type: "date", value: hoje() });
-    var obs = el("input", { id: "f-obs", type: "text", maxlength: "200", placeholder: "Ex.: compra de queijo na Atacadão" });
+    var obs = el("input", { id: "f-obs", type: "text", maxlength: "200", placeholder: "Ex.: " + exN(1) });
     var dica = el("div", { class: "hint" });
-    var nomeNovo = el("input", { id: "f-novo", type: "text", maxlength: "40", placeholder: "Ex.: Manutenção do forno" });
+    var nomeNovo = el("input", { id: "f-novo", type: "text", maxlength: "40", placeholder: "Ex.: " + exN(2) });
     var chk = el("input", { id: "f-conta", type: "checkbox" }); chk.checked = true;
     var chkFixo = el("input", { id: "f-fixo", type: "checkbox" });
     var kidsNovo = [
@@ -617,7 +633,7 @@ if (typeof document !== "undefined") {
       el("div", { class: "big " + (pagar ? "neg" : "pos"), text: money(pagar ? rc.pagarTotal : rc.receberTotal) }),
       el("div", { class: "grid2" }, [mini("Atrasado", money(pagar ? rc.pagarAtraso : rc.receberAtraso), (pagar ? rc.pagarAtraso : rc.receberAtraso) > 0 ? "neg" : ""), mini("Nos próximos 7 dias", money(pagar ? rc.pagar7 : rc.receber7))])
     ]));
-    var fd = el("input", { id: "c-desc", type: "text", maxlength: "80", placeholder: pagar ? "Ex.: Aluguel, fornecedor de queijo" : "Ex.: Fiado, encomenda de bolo" });
+    var fd = el("input", { id: "c-desc", type: "text", maxlength: "80", placeholder: "Ex.: " + (pagar ? exN(3) : exN(4)) });
     var fv = el("input", { id: "c-valor", type: "text", inputmode: "decimal", placeholder: "0,00", autocomplete: "off" });
     var fe = el("input", { id: "c-venc", type: "date", value: h });
     var fq = el("input", { id: "c-quem", type: "text", maxlength: "60", placeholder: pagar ? "Para quem (opcional)" : "Nome do cliente (opcional)" });
