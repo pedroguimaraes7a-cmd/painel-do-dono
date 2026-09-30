@@ -23,3 +23,11 @@ Página de vendas com os dois planos, demos (`/basico/#demo`, `/avancado/#demo`)
 
 ## Cuidados
 Aviso de que não é contabilidade; direito de arrependimento de 7 dias em venda online; MEI/Pix PF a confirmar com contador; abordagem fria manual e em baixo volume (WhatsApp bloqueia disparo em massa).
+
+## Atualização 30/09/2026: licença, garantia e antifraude de reembolso
+- "Teste grátis" removido do site. Garantia de 7 dias para compras online (CDC art. 49).
+- Cada comprador recebe link pessoal de ativação (código assinado ECDSA P-256, verificado no próprio app, sem servidor). Sem o código o app não abre.
+- Reembolso/estorno: o dono coloca o id da licença em `revogados.json` no site; o app confere ao abrir com internet e passa a exibir "Licença desativada", com opção de baixar backup dos próprios dados. Limitação: offline o app segue até a primeira checagem online; quem nunca abre com internet escapa (risco baixo, dado o público).
+- Chave privada só com o dono (fora do repositório). Gerador local `gerador-de-licencas.html` cria licenças e o arquivo de revogação.
+- Preços: exemplos do formulário seguem o nicho escolhido (ex.: pizzaria = "Pizza de mussarela grande"; salão = "Unha em gel"; geral = exemplos genéricos).
+- Próximo: automatizar entrega/revogação via webhook da Hotmart (Cloudflare Worker) após as primeiras vendas.
