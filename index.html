@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel do Dono – saiba quanto sobra no seu negócio</title>
+<title>Meu Painel do Dono – saiba quanto sobra no seu negócio</title>
 <meta name="description" content="Aplicativo simples para pequeno comércio: entradas, saídas, caixa, lucro e contas. Pagamento único. Seus dados ficam só no seu celular.">
 <link rel="icon" href="favicon.png">
 <style>
@@ -133,10 +133,10 @@ footer{padding:30px 0 60px;color:var(--mut);font-size:13px;text-align:center}
   <details><summary>Preciso de internet?</summary><p class="mut">Só para instalar. Depois funciona sem internet.</p></details>
   <details><summary>Onde ficam meus dados?</summary><p class="mut">Somente no seu celular. Por isso é importante baixar o backup de vez em quando: se trocar de aparelho ou limpar os dados do navegador, sem backup eles se perdem.</p></details>
   <details><summary>Funciona no iPhone e no Android?</summary><p class="mut">Sim. No Android pelo Chrome, no iPhone pelo Safari, usando “Adicionar à tela de início”.</p></details>
-  <details><summary>Substitui o contador?</summary><p class="mut">Não. O Painel do Dono dá indicadores simples a partir do que você lança. Não é orientação contábil nem fiscal.</p></details>
+  <details><summary>Substitui o contador?</summary><p class="mut">Não. O Meu Painel do Dono dá indicadores simples a partir do que você lança. Não é orientação contábil nem fiscal.</p></details>
   <details><summary>Posso migrar do Básico para o Avançado?</summary><p class="mut">Sim. Baixe o backup no Básico e restaure no Avançado: os lançamentos vêm junto.</p></details>
 </section>
-<footer>Painel do Dono · Nenhum dado seu é enviado a servidores.</footer>
+<footer>Meu Painel do Dono, por Bumerân · Nenhum dado seu é enviado a servidores.</footer>
 </div>
 <script>
 // Preencha aqui: número do WhatsApp (só dígitos, ex.: 5511999999999) e os links de checkout da Hotmart.
@@ -155,7 +155,7 @@ document.querySelectorAll("[data-plano]").forEach(function (a) {
 wa.addEventListener("click", function (e) {
   e.preventDefault();
   if (!WHATSAPP) { alert("Contato em breve."); return; }
-  location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Quero saber mais do Painel do Dono" + (plano ? ". Plano: " + NOMES[plano] : "."));
+  location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Quero saber mais do Meu Painel do Dono" + (plano ? ". Plano: " + NOMES[plano] : "."));
 });
 </script>
 </body>

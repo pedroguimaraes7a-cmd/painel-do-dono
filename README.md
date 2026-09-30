@@ -1,4 +1,4 @@
-# Bumerân · Painel do Dono
+# Bumerân · Meu Painel do Dono
 
 - `index.html` – página de vendas
 - `basico/` e `avancado/` – os dois aplicativos (gerados de `fonte-painel.html` por `build.py`)

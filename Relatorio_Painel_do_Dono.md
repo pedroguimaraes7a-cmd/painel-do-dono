@@ -1,4 +1,4 @@
-# Relatório do projeto Painel do Dono (para revisão por outra IA)
+# Relatório do projeto Meu Painel do Dono (para revisão por outra IA)
 
 Data: 30/09/2026 · Dono: Pedro Guimarães (Itaquaquecetuba) · Marca: Bumerân
 

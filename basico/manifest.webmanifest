@@ -1,6 +1,6 @@
 {
-  "name": "Painel do Dono",
-  "short_name": "Painel",
+  "name": "Meu Painel do Dono",
+  "short_name": "Meu Painel",
   "description": "Controle simples de entradas, saídas, caixa e lucro do seu negócio.",
   "start_url": "./",
   "scope": "./",

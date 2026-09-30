@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Painel do Dono</title>
+<title>Meu Painel do Dono</title>
 <meta name="theme-color" content="#a8322a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -448,7 +448,7 @@ if (typeof document !== "undefined") {
     var nome = el("input", { id: "ob-nome", type: "text", maxlength: "60", placeholder: "Ex.: Pizzaria do João" });
     var sel = el("select", { id: "ob-nicho" }, Object.keys(NICHOS).map(function (k) { return el("option", { value: k, text: NICHOS[k].emoji + "  " + NICHOS[k].nome }); }));
     return el("div", null, [
-      el("div", { class: "welcome" }, [el("div", { class: "logo", text: "💰" }), el("h1", { text: "Painel do Dono" + (AV ? " Avançado" : "") }),
+      el("div", { class: "welcome" }, [el("div", { class: "logo", text: "💰" }), el("h1", { text: "Meu Painel do Dono" + (AV ? " Avançado" : "") }),
         el("p", { class: "sub", text: "Veja o que entrou, o que saiu e quanto sobrou de verdade no seu negócio. Seus dados ficam só neste aparelho." })]),
       el("div", { class: "card" }, [
         el("label", { for: "ob-nome", text: "Nome do seu negócio" }), nome,
@@ -874,7 +874,7 @@ if (typeof document !== "undefined") {
         tabela(["Categoria", "Valor"], porCategoria(l, S.ym, "e").map(function (r) { return [r.c, money(r.v)]; })),
         el("h2", { style: "margin-top:16px", text: "Lançamentos" }),
         tabela(["Data", "Tipo", "Categoria", "Valor", "Obs."], m.slice().reverse().map(function (x) { return [dataBR(x.d), x.t === "e" ? "Entrada" : "Saída", x.c, money(x.v), x.o]; })),
-        el("p", { class: "hint", text: "Relatório gerado pelo Painel do Dono a partir dos lançamentos feitos pelo dono. Não substitui contador." })
+        el("p", { class: "hint", text: "Relatório gerado pelo Meu Painel do Dono a partir dos lançamentos feitos pelo dono. Não substitui contador." })
       ])
     ];
     return el("div", null, kids);
@@ -974,7 +974,7 @@ if (typeof document !== "undefined") {
     if (CONTATO_WHATSAPP || INSTAGRAM_URL) {
       var fb = el("div", { class: "card" }, [el("h2", { text: "Fale com a gente" })]);
       if (CONTATO_WHATSAPP) fb.appendChild(el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", target: "_blank", rel: "noopener",
-        href: "https://wa.me/" + CONTATO_WHATSAPP + "?text=" + encodeURIComponent("Oi! Estou usando o Painel do Dono e queria deixar uma sugestão: "), text: "Enviar sugestão pelo WhatsApp" }));
+        href: "https://wa.me/" + CONTATO_WHATSAPP + "?text=" + encodeURIComponent("Oi! Estou usando o Meu Painel do Dono e queria deixar uma sugestão: "), text: "Enviar sugestão pelo WhatsApp" }));
       if (INSTAGRAM_URL) fb.appendChild(el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", target: "_blank", rel: "noopener", href: INSTAGRAM_URL, text: "Conteúdo de finanças para empresários" }));
       kids.push(fb);
     }
@@ -991,7 +991,7 @@ if (typeof document !== "undefined") {
         S.dados.lanc = []; S.dados.contas = []; S.dados.produtos = []; S.dados.config.meta = 0; S.confirma = null; salvar(); aviso("Dados apagados");
       } })
     ]));
-    kids.push(el("p", { class: "hint", text: "O Painel do Dono mostra indicadores simples a partir do que você lança. Ele não substitui contador nem dá orientação fiscal. Nenhum dado seu é enviado para servidor." }));
+    kids.push(el("p", { class: "hint", text: "O Meu Painel do Dono mostra indicadores simples a partir do que você lança. Ele não substitui contador nem dá orientação fiscal. Nenhum dado seu é enviado para servidor." }));
     return el("div", null, kids);
   }
 

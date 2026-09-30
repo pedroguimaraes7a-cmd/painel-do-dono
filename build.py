@@ -3,8 +3,8 @@ from PIL import Image
 import numpy as np, colorsys
 SRC="/home/claude/painel_src/src.html"; OLD="/home/claude/painel"
 src=open(SRC,encoding="utf-8").read()
-ED={"basico":dict(title="Painel do Dono",short="Painel",theme="#a8322a",v="painel-basico-v1"),
-    "avancado":dict(title="Painel do Dono Avançado",short="Painel Av.",theme="#1f3a68",v="painel-avancado-v1")}
+ED={"basico":dict(title="Meu Painel do Dono",short="Meu Painel",theme="#a8322a",v="painel-basico-v1"),
+    "avancado":dict(title="Meu Painel do Dono Avançado",short="Painel Av.",theme="#1f3a68",v="painel-avancado-v1")}
 def tint(im):
     a=np.array(im.convert("RGBA")).astype(float)
     rgb=a[...,:3]/255
@@ -21,7 +21,7 @@ def tint(im):
 for ed,c in ED.items():
     d=f"{OLD}/{ed}"; os.makedirs(d,exist_ok=True)
     h=src.replace('var EDICAO = "basico";',f'var EDICAO = "{ed}";',1)
-    h=h.replace("<title>Painel do Dono</title>",f"<title>{c['title']}</title>",1)
+    h=h.replace("<title>Meu Painel do Dono</title>",f"<title>{c['title']}</title>",1)
     h=h.replace('content="Painel">',f'content="{c["short"]}">',1)
     h=h.replace("#a8322a",c["theme"]) if ed=="avancado" and False else h
     open(f"{d}/index.html","w",encoding="utf-8").write(h)
