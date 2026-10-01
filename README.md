@@ -12,3 +12,6 @@
 - A chave **privada** fica só com o dono (pasta `privado/`, fora do repositório). No repositório há só a chave pública (embutida no app no build).
 - Revogação: incluir o id da licença em `revogados.json` (`{"ids":["abc123"]}`). O app confere ao abrir com internet e passa a mostrar "Licença desativada" (com opção de baixar backup).
 - Garantia de 7 dias: ao devolver o dinheiro, revogar a licença.
+
+## Endereço oficial
+https://somosbumeran.com.br (GitHub Pages, DNS no Registro.br, HTTPS ativo). Domínio registrado em 30/09/2026, válido até 30/09/2028.
