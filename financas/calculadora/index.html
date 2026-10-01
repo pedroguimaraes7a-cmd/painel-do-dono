@@ -4,130 +4,218 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calculadora de lucro | Bumerân</title>
+<meta name="description" content="Descubra em segundos quanto sobra de verdade em cada venda e qual preço cobrar. Grátis, para qualquer negócio.">
+<meta name="theme-color" content="#050d1f">
+<link rel="icon" href="../favicon.png">
 <style>
-  :root { --bg:#f6f4ef; --card:#fff; --text:#1f2430; --muted:#5f6675; --primary:#b23a2e; --line:#e4e0d6; --ok:#1e7a4c; --bad:#c0392b; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg:#16181d; --card:#20232b; --text:#eceef3; --muted:#a0a7b6; --primary:#f08a7d; --line:#333846; --ok:#5fd39a; --bad:#ff8a7a; }
-  }
-  :root[data-theme="dark"] { --bg:#16181d; --card:#20232b; --text:#eceef3; --muted:#a0a7b6; --primary:#f08a7d; --line:#333846; --ok:#5fd39a; --bad:#ff8a7a; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,Helvetica,sans-serif; line-height:1.4; }
-  .wrap { max-width:640px; margin:0 auto; padding:16px; }
-  h1 { font-size:22px; margin:8px 0 4px; color:var(--primary); }
-  .sub { color:var(--muted); font-size:14px; margin:0 0 16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
-  label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
-  input { width:100%; padding:12px; font-size:16px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); }
+  :root { --navy:#050d1f; --navy2:#0b1a3a; --o1:#ff7a18; --o2:#ff3d00; --card:#fff; --text:#16213a; --mut:#5a6680; --line:#e3e8f2; --bg2:#f3f6fc; --ok:#12805a; --okbg:#e3f6ee; --bad:#c62d2d; --badbg:#fdeaea; --mid:#a55b00; --midbg:#fff2dc; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; color:var(--text); line-height:1.45; font-size:18px;
+         background:radial-gradient(700px 420px at 85% -5%,rgba(255,90,20,.30),transparent 70%),radial-gradient(600px 500px at 0% 40%,rgba(40,80,200,.25),transparent 70%),var(--navy); min-height:100vh; }
+  .wrap { max-width:620px; margin:0 auto; padding:18px 16px 60px; }
+  .brand { display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:800; font-size:20px; }
+  .brand img { height:34px; }
+  h1 { color:#fff; font-size:32px; line-height:1.12; margin:22px 0 8px; letter-spacing:-.5px; }
+  h1 span { background:linear-gradient(90deg,var(--o1),var(--o2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lead { color:#c3cde4; margin:0 0 18px; font-size:19px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+  .chip { border:1.5px solid rgba(255,255,255,.22); background:rgba(255,255,255,.07); color:#fff; padding:10px 14px; border-radius:999px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .chip.on { background:linear-gradient(180deg,var(--o1),var(--o2)); border-color:transparent; box-shadow:0 6px 18px rgba(255,80,0,.35); }
+  .chiphint { color:#9fb0d4; font-size:15px; margin:-6px 0 14px; }
+  .card { background:var(--card); border-radius:22px; padding:20px 18px; margin-bottom:16px; box-shadow:0 14px 40px rgba(0,0,0,.28); }
+  .step { display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; margin:0 0 4px; }
+  .step i { font-style:normal; flex:none; width:30px; height:30px; border-radius:50%; background:linear-gradient(180deg,var(--o1),var(--o2)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .help { color:var(--mut); font-size:15.5px; margin:0 0 8px; }
+  .sep { border:0; border-top:1px solid var(--line); margin:18px 0; }
+  .f { position:relative; }
+  .f .u { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--mut); font-weight:700; pointer-events:none; }
+  .f .u.r { left:auto; right:14px; }
+  input[type=text] { width:100%; height:56px; padding:0 14px; font-size:21px; font-weight:700; color:var(--text); border:2px solid var(--line); border-radius:14px; background:var(--bg2); font-family:inherit; outline:none; }
+  input[type=text]:focus { border-color:var(--o1); background:#fff; box-shadow:0 0 0 4px rgba(255,122,24,.18); }
+  .f.m input { padding-left:46px; } .f.p input { padding-right:40px; }
+  input.nm { font-size:19px; font-weight:600; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  button { width:100%; margin-top:16px; padding:14px; font-size:16px; font-weight:bold; border:0; border-radius:10px; background:var(--primary); color:#fff; cursor:pointer; }
-  .res { display:none; }
-  .box { border-radius:10px; padding:14px; background:var(--bg); margin-bottom:10px; }
-  .box .t { font-size:12px; color:var(--muted); }
-  .box .v { font-size:22px; font-weight:bold; margin-top:2px; }
-  .pos { color:var(--ok); } .neg { color:var(--bad); }
-  .note { font-size:12px; color:var(--muted); }
-  .err { color:var(--bad); font-size:14px; margin-top:12px; display:none; }
+  @media (max-width:430px) { .row { grid-template-columns:1fr; } h1 { font-size:28px; } }
+  label { display:block; font-weight:700; font-size:16px; margin:14px 0 6px; }
+  .quick { display:flex; gap:8px; margin-top:8px; }
+  .quick button { flex:1; height:44px; border-radius:12px; border:2px solid var(--line); background:#fff; font-weight:800; font-size:17px; color:var(--text); cursor:pointer; font-family:inherit; }
+  .quick button.on { border-color:var(--o1); background:#fff3e8; color:#b34700; }
+  #res { position:relative; }
+  .verdict { border-radius:18px; padding:18px; margin-bottom:12px; }
+  .verdict.ok { background:var(--okbg); } .verdict.mid { background:var(--midbg); } .verdict.bad { background:var(--badbg); }
+  .verdict small { display:block; font-weight:700; color:var(--mut); font-size:16px; }
+  .verdict .big { font-size:42px; font-weight:900; letter-spacing:-1px; line-height:1.1; margin:4px 0; }
+  .verdict.ok .big { color:var(--ok); } .verdict.mid .big { color:var(--mid); } .verdict.bad .big { color:var(--bad); }
+  .verdict p { margin:6px 0 0; font-size:17px; }
+  .pill { display:inline-block; padding:4px 12px; border-radius:999px; font-weight:800; font-size:15px; margin-bottom:6px; }
+  .ok .pill { background:#bfead8; color:#0b5c40; } .mid .pill { background:#ffdca3; color:#7a4300; } .bad .pill { background:#f8c5c5; color:#8d1c1c; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:430px) { .two { grid-template-columns:1fr; } }
+  .mini { background:var(--bg2); border-radius:16px; padding:14px; }
+  .mini small { display:block; color:var(--mut); font-weight:700; font-size:15px; }
+  .mini b { display:block; font-size:25px; font-weight:900; margin-top:2px; }
+  .mini b.g { color:var(--ok); }
+  .mini .n { font-size:14.5px; color:var(--mut); margin-top:2px; }
+  .month { margin-top:12px; background:var(--bg2); border-radius:16px; padding:14px; }
+  .month .row2 { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:700; }
+  .month input { width:96px; height:46px; font-size:19px; text-align:center; padding:0 8px; }
+  .month .out { font-size:24px; font-weight:900; margin-top:6px; }
+  details { margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
+  summary { cursor:pointer; font-weight:800; font-size:18px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:"+"; font-size:26px; color:var(--o2); line-height:1; }
+  details[open] summary::after { content:"–"; }
+  .cmp { margin-top:12px; padding:12px; border-radius:14px; background:var(--bg2); font-weight:700; }
+  .cta { background:linear-gradient(135deg,#102a5c,#0b1a3a); color:#fff; border:1px solid rgba(255,255,255,.14); }
+  .cta h2 { margin:0 0 6px; font-size:24px; line-height:1.15; }
+  .cta p { margin:0 0 14px; color:#c3cde4; font-size:17px; }
+  .btn { display:block; text-align:center; text-decoration:none; padding:16px; border-radius:999px; font-weight:800; font-size:18px; color:#fff; background:linear-gradient(180deg,var(--o1),var(--o2)); box-shadow:0 10px 28px rgba(255,80,0,.4); }
+  .small { color:#8f9fc4; font-size:14px; margin-top:6px; }
+  .err { color:var(--bad); font-weight:700; margin-top:10px; display:none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Quanto sobra de verdade no que você vende?</h1>
-  <p class="sub">Preencha os números de uma unidade do seu produto ou serviço e compare o lucro vendendo por aplicativo ou plataforma e vendendo direto (WhatsApp, balcão). Os valores já preenchidos são só exemplo: troque pelos seus.</p>
+  <a class="brand" href="../../"><img src="../../assets/logo-mark.png" alt="">Bumerân</a>
+  <h1>Quanto <span>sobra de verdade</span> em cada venda?</h1>
+  <p class="lead">Responda 5 perguntas rápidas. O resultado aparece na hora, enquanto você digita.</p>
+
+  <div class="chips" id="chips" role="group" aria-label="Escolha um exemplo">
+    <button type="button" class="chip" data-k="pizzaria">🍕 Pizzaria</button>
+    <button type="button" class="chip" data-k="barbearia">💈 Barbearia</button>
+    <button type="button" class="chip" data-k="salao">💅 Salão e unhas</button>
+    <button type="button" class="chip" data-k="lavarapido">🚗 Lava-rápido</button>
+    <button type="button" class="chip" data-k="roupa">👕 Loja de roupa</button>
+    <button type="button" class="chip on" data-k="outro">✨ Outro</button>
+  </div>
+  <p class="chiphint">Toque no seu tipo de negócio para ver um exemplo. Depois troque pelos seus números.</p>
 
   <div class="card">
-    <div class="row">
-      <div><label for="preco">Preço de venda na plataforma/app (R$)</label><input id="preco" type="number" inputmode="decimal" step="0.01" value="50"></div>
-      <div><label for="custo">Custo do material ou ingredientes (R$)</label><input id="custo" type="number" inputmode="decimal" step="0.01" value="15"></div>
-    </div>
-    <div class="row">
-      <div><label for="emb">Embalagem (R$)</label><input id="emb" type="number" inputmode="decimal" step="0.01" value="2.5"></div>
-      <div><label for="fixo">Custos fixos por pedido (R$)</label><input id="fixo" type="number" inputmode="decimal" step="0.01" value="3"></div>
-    </div>
-    <div class="row">
-      <div><label for="app">Taxa da plataforma/app (%)</label><input id="app" type="number" inputmode="decimal" step="0.1" value="12"></div>
-      <div><label for="pag">Taxa de pagamento online (%)</label><input id="pag" type="number" inputmode="decimal" step="0.1" value="3.5"></div>
-    </div>
-    <div class="row">
-      <div><label for="imp">Impostos (%)</label><input id="imp" type="number" inputmode="decimal" step="0.1" value="4"></div>
-      <div><label for="entApp">Entrega paga por você na plataforma (R$)</label><input id="entApp" type="number" inputmode="decimal" step="0.01" value="0"></div>
-    </div>
-    <div class="row">
-      <div><label for="precoDir">Preço na venda direta (R$)</label><input id="precoDir" type="number" inputmode="decimal" step="0.01" value="50"></div>
-      <div><label for="taxaDir">Taxa na venda direta (%)</label><input id="taxaDir" type="number" inputmode="decimal" step="0.1" value="2"></div>
-    </div>
-    <div class="row">
-      <div><label for="entDir">Entrega na venda direta (R$)</label><input id="entDir" type="number" inputmode="decimal" step="0.01" value="5"></div>
-      <div><label for="alvo">Margem de lucro desejada (%)</label><input id="alvo" type="number" inputmode="decimal" step="0.1" value="20"></div>
-    </div>
-    <button id="calc" type="button">Calcular</button>
+    <p class="step"><i>1</i>O que você vende?</p>
+    <input id="nome" class="nm" type="text" maxlength="50" placeholder="Ex.: bolo de pote" autocomplete="off">
+
+    <hr class="sep">
+    <p class="step"><i>2</i>Por quanto você vende?</p>
+    <p class="help">O preço que o cliente paga por uma unidade.</p>
+    <div class="f m"><span class="u">R$</span><input id="preco" type="text" inputmode="decimal" autocomplete="off" value="12"></div>
+
+    <hr class="sep">
+    <p class="step"><i>3</i>Quanto custa para fazer?</p>
+    <label for="custo">Material ou mercadoria <span style="font-weight:400;color:var(--mut)" id="custoDica">(o que você gasta em 1 unidade)</span></label>
+    <div class="f m"><span class="u">R$</span><input id="custo" type="text" inputmode="decimal" autocomplete="off" value="4"></div>
+    <label for="outros">Outros custos de cada unidade <span style="font-weight:400;color:var(--mut)" id="outrosDica">(embalagem, entrega...)</span></label>
+    <div class="f m"><span class="u">R$</span><input id="outros" type="text" inputmode="decimal" autocomplete="off" value="1"></div>
+
+    <hr class="sep">
+    <p class="step"><i>4</i>Quanto é descontado da venda?</p>
+    <p class="help">Taxa do aplicativo, da maquininha e imposto, somados. Não sabe? Deixe 0 e depois confira com o seu contrato.</p>
+    <div class="f p"><input id="taxa" type="text" inputmode="decimal" autocomplete="off" value="5"><span class="u r">%</span></div>
+
+    <hr class="sep">
+    <p class="step"><i>5</i>Quanto de lucro você quer?</p>
+    <p class="help">De cada venda, quantos por cento devem sobrar para você.</p>
+    <div class="f p"><input id="alvo" type="text" inputmode="decimal" autocomplete="off" value="20"><span class="u r">%</span></div>
+    <div class="quick" id="quick"><button type="button" data-v="10">10%</button><button type="button" data-v="20" class="on">20%</button><button type="button" data-v="30">30%</button><button type="button" data-v="40">40%</button></div>
     <div class="err" id="err"></div>
   </div>
 
-  <div class="res" id="res">
-    <div class="card">
-      <div class="box"><div class="t">Lucro por unidade vendida na plataforma</div><div class="v" id="lApp"></div><div class="note" id="mApp"></div></div>
-      <div class="box"><div class="t">Lucro por unidade vendida direto</div><div class="v" id="lDir"></div><div class="note" id="mDir"></div></div>
-      <div class="box"><div class="t">Diferença por unidade (direto menos plataforma)</div><div class="v" id="dif"></div></div>
-      <div class="box"><div class="t">Preço mínimo na plataforma para atingir sua margem desejada</div><div class="v" id="minimo"></div></div>
-      <p class="note" id="aviso"></p>
-      <p class="note">Estimativa simples. Não considera cupom, desconto bancado por você, taxa de saque nem regime tributário. Confirme suas taxas reais com o aplicativo e com seu contador.</p>
+  <div class="card" id="res">
+    <div class="verdict" id="vd"><span class="pill" id="pill"></span><small id="vsm">Em cada venda sobra</small><div class="big" id="vbig"></div><p id="vtxt"></p></div>
+    <div class="two">
+      <div class="mini"><small>Preço mínimo</small><b id="min"></b><div class="n">abaixo disso você perde dinheiro</div></div>
+      <div class="mini"><small id="sugT">Preço para ter o lucro que quer</small><b class="g" id="sug"></b><div class="n" id="sugN"></div></div>
     </div>
+    <div class="month"><div class="row2">Se você vender <input id="qtd" type="text" inputmode="numeric" value="100" autocomplete="off"> por mês:</div><div class="out" id="mes"></div></div>
+
+    <details>
+      <summary>Também vende direto (WhatsApp, balcão)?</summary>
+      <p class="help" style="margin-top:10px">Compare quanto sobra quando não há taxa de aplicativo.</p>
+      <div class="row">
+        <div><label for="precoDir">Preço na venda direta</label><div class="f m"><span class="u">R$</span><input id="precoDir" type="text" inputmode="decimal" autocomplete="off" value="12"></div></div>
+        <div><label for="taxaDir">Taxa na venda direta</label><div class="f p"><input id="taxaDir" type="text" inputmode="decimal" autocomplete="off" value="2"><span class="u r">%</span></div></div>
+      </div>
+      <div class="cmp" id="cmp"></div>
+    </details>
   </div>
+
+  <div class="card cta">
+    <h2>Quer ver isso todos os dias, no seu celular?</h2>
+    <p>O Meu Painel do Dono mostra o que entrou, o que saiu e o que realmente sobrou no seu negócio. Pagamento único, sem mensalidade.</p>
+    <a class="btn" href="../">Conhecer o Meu Painel do Dono</a>
+    <div class="small">Uma solução Bumerân Finanças</div>
+  </div>
+  <p class="small" style="text-align:center">Estimativa simples. Não considera cupom, desconto bancado por você, frete grátis nem regime tributário. Confirme as taxas reais com o aplicativo, a maquininha e o seu contador.</p>
 </div>
 
 <script>
+/* ---- lógica pura (testável) ---- */
 function calcular(p) {
-  var taxasApp = (p.app + p.pag + p.imp) / 100;
-  var custoApp = p.custo + p.emb + p.entApp + p.fixo;
-  var lucroApp = p.preco * (1 - taxasApp) - custoApp;
-  var custoDir = p.custo + p.emb + p.entDir + p.fixo;
-  var lucroDir = p.precoDir * (1 - (p.taxaDir + p.imp) / 100) - custoDir;
-  var denom = 1 - taxasApp - p.alvo / 100;
-  var minimo = denom > 0 ? custoApp / denom : null;
+  var custo = p.custo + p.outros, liq = 1 - p.taxa / 100;
+  var lucro = p.preco * liq - custo;
+  var denom = liq - p.alvo / 100;
   return {
-    lucroApp: lucroApp,
-    margemApp: p.preco > 0 ? lucroApp / p.preco : null,
-    lucroDir: lucroDir,
-    margemDir: p.precoDir > 0 ? lucroDir / p.precoDir : null,
-    diferenca: lucroDir - lucroApp,
-    minimo: minimo,
-    custoApp: custoApp
+    custo: custo, lucro: lucro,
+    margem: p.preco > 0 ? lucro / p.preco : null,
+    minimo: liq > 0 ? custo / liq : null,
+    sugerido: denom > 0 ? custo / denom : null,
+    lucroDir: p.precoDir > 0 ? p.precoDir * (1 - p.taxaDir / 100) - custo : null
   };
 }
 if (typeof module !== "undefined") { module.exports = { calcular: calcular }; }
 
 if (typeof document !== "undefined") {
-  var fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   var $ = function (id) { return document.getElementById(id); };
-  var ids = ["preco","custo","emb","fixo","app","pag","imp","entApp","precoDir","taxaDir","entDir","alvo"];
-  function pct(x) { return x === null ? "-" : (x * 100).toFixed(1).replace(".", ",") + "% de margem"; }
-  function cor(el, v) { el.className = "v " + (v < 0 ? "neg" : "pos"); }
-  function rodar() {
-    var p = {};
-    var ok = true;
-    ids.forEach(function (id) {
-      var v = parseFloat($(id).value);
-      if (isNaN(v) || v < 0) ok = false;
-      p[id] = v;
-    });
-    var err = $("err");
-    if (!ok || !(p.preco > 0) || !(p.precoDir > 0)) {
-      err.textContent = "Confira os campos: todos precisam de número igual ou maior que zero, e os preços de venda maiores que zero.";
-      err.style.display = "block"; $("res").style.display = "none"; return;
-    }
-    err.style.display = "none";
-    var r = calcular(p);
-    $("lApp").textContent = fmt.format(r.lucroApp); cor($("lApp"), r.lucroApp);
-    $("mApp").textContent = pct(r.margemApp);
-    $("lDir").textContent = fmt.format(r.lucroDir); cor($("lDir"), r.lucroDir);
-    $("mDir").textContent = pct(r.margemDir);
-    $("dif").textContent = fmt.format(r.diferenca); cor($("dif"), r.diferenca);
-    $("minimo").textContent = r.minimo === null ? "Ajuste as taxas" : fmt.format(r.minimo);
-    $("aviso").textContent = r.lucroApp < 0 ? "Atenção: nesse preço você tem prejuízo em cada unidade vendida na plataforma." : "";
-    $("res").style.display = "block";
-    $("res").scrollIntoView({ behavior: "smooth", block: "start" });
+  var BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  function num(id) { var s = String($(id).value).replace(/\s/g, "").replace("R$", "").replace("%", "").replace(/\./g, function (m, i, a) { return /,/.test(a) ? "" : m; }).replace(",", "."); if (s === "") return 0; var v = parseFloat(s); return isFinite(v) && v >= 0 ? v : NaN; }
+  function pc(x) { return (x * 100).toFixed(0).replace(".", ",") + "%"; }
+  var PRE = {
+    pizzaria:   { nome: "Pizza de mussarela grande", preco: "45", custo: "15", outros: "4", taxa: "15", alvo: "20", dir: "45", cd: "3", cM: "(massa, molho, queijo)", cO: "(caixa, gás, entrega)" },
+    barbearia:  { nome: "Corte masculino", preco: "40", custo: "3", outros: "2", taxa: "4", alvo: "30", dir: "40", cd: "2", cM: "(produtos usados no corte)", cO: "(toalha, lâmina, parte do aluguel)" },
+    salao:      { nome: "Unha em gel", preco: "90", custo: "9", outros: "6", taxa: "4", alvo: "35", dir: "90", cd: "2", cM: "(gel, lixa, esmalte)", cO: "(algodão, álcool, parte do aluguel)" },
+    lavarapido: { nome: "Lavagem completa de carro", preco: "80", custo: "12", outros: "8", taxa: "4", alvo: "30", dir: "80", cd: "2", cM: "(shampoo, cera, produtos)", cO: "(água, panos, energia)" },
+    roupa:      { nome: "Blusa de alça", preco: "69,90", custo: "30", outros: "3", taxa: "5", alvo: "30", dir: "69,90", cd: "3", cM: "(quanto pagou na peça)", cO: "(etiqueta, sacola, frete)" },
+    outro:      { nome: "Bolo de pote", preco: "12", custo: "4", outros: "1", taxa: "5", alvo: "20", dir: "12", cd: "2", cM: "(o que você gasta em 1 unidade)", cO: "(embalagem, entrega...)" }
+  };
+  function aplicar(k) {
+    var p = PRE[k]; if (!p) return;
+    $("nome").value = p.nome; $("preco").value = p.preco; $("custo").value = p.custo; $("outros").value = p.outros; $("taxa").value = p.taxa; $("alvo").value = p.alvo;
+    $("precoDir").value = p.dir; $("taxaDir").value = p.cd; $("custoDica").textContent = p.cM; $("outrosDica").textContent = p.cO;
+    [].forEach.call(document.querySelectorAll("#chips .chip"), function (b) { b.classList.toggle("on", b.dataset.k === k); });
+    rodar();
   }
-  $("calc").addEventListener("click", rodar);
+  function rodar() {
+    var ids = ["preco", "custo", "outros", "taxa", "alvo", "precoDir", "taxaDir"], p = {}, ok = true;
+    ids.forEach(function (i) { p[i] = num(i); if (isNaN(p[i])) ok = false; });
+    var err = $("err");
+    if (!ok || !(p.preco > 0) || p.taxa >= 100) { err.textContent = !ok ? "Confira os números: use só dígitos, vírgula e valores a partir de zero." : (p.taxa >= 100 ? "A taxa precisa ser menor que 100%." : "Digite o preço de venda."); err.style.display = "block"; $("res").style.opacity = .35; return; }
+    err.style.display = "none"; $("res").style.opacity = 1;
+    var r = calcular({ preco: p.preco, custo: p.custo, outros: p.outros, taxa: p.taxa, alvo: p.alvo, precoDir: p.precoDir, taxaDir: p.taxaDir });
+    var nome = $("nome").value.trim();
+    var st = r.lucro < 0 ? "bad" : (r.margem < p.alvo / 100 - 0.0005 ? "mid" : "ok");
+    $("vd").className = "verdict " + st;
+    $("pill").textContent = st === "bad" ? "Você está perdendo dinheiro" : st === "mid" ? "Sobra pouco" : "Preço bom";
+    $("vsm").textContent = (nome ? "Em cada " + nome.toLowerCase() + " vendido" : "Em cada venda") + " sobra";
+    $("vbig").textContent = (r.lucro < 0 ? "-" : "") + BRL.format(Math.abs(r.lucro));
+    $("vtxt").textContent = r.lucro < 0
+      ? "Cada venda tira " + BRL.format(-r.lucro) + " do seu bolso. É preciso aumentar o preço ou reduzir custos."
+      : "Isso é " + pc(r.margem) + " do preço" + (st === "mid" ? ", abaixo dos " + pc(p.alvo / 100) + " que você quer." : ". Dentro do que você quer.");
+    $("min").textContent = r.minimo === null ? "-" : BRL.format(r.minimo);
+    $("sugT").textContent = "Preço para ter " + pc(p.alvo / 100) + " de lucro";
+    $("sug").textContent = r.sugerido === null ? "Ajuste os %" : BRL.format(r.sugerido);
+    $("sugN").textContent = r.sugerido === null ? "taxa + lucro passam de 100%" : (r.sugerido > p.preco ? "sugestão: subir " + BRL.format(r.sugerido - p.preco) : "você já cobra mais que isso");
+    var q = parseInt(String($("qtd").value).replace(/\D/g, ""), 10) || 0;
+    $("mes").textContent = BRL.format(r.lucro * q) + (r.lucro * q < 0 ? " de prejuízo" : " de lucro");
+    $("mes").style.color = r.lucro < 0 ? "var(--bad)" : "var(--ok)";
+    if (r.lucroDir !== null) {
+      var d = r.lucroDir - r.lucro;
+      $("cmp").textContent = "Direto: sobra " + BRL.format(r.lucroDir) + " por venda. " + (Math.abs(d) < 0.005 ? "É igual ao da plataforma." : d > 0 ? "São " + BRL.format(d) + " a mais que na plataforma." : "São " + BRL.format(-d) + " a menos que na plataforma.");
+    }
+  }
+  ["nome", "preco", "custo", "outros", "taxa", "alvo", "qtd", "precoDir", "taxaDir"].forEach(function (i) { $(i).addEventListener("input", function () { if (i === "alvo") [].forEach.call(document.querySelectorAll("#quick button"), function (b) { b.classList.toggle("on", b.dataset.v === $("alvo").value); }); rodar(); }); });
+  [].forEach.call(document.querySelectorAll("#chips .chip"), function (b) { b.addEventListener("click", function () { aplicar(b.dataset.k); }); });
+  [].forEach.call(document.querySelectorAll("#quick button"), function (b) { b.addEventListener("click", function () { $("alvo").value = b.dataset.v; [].forEach.call(document.querySelectorAll("#quick button"), function (x) { x.classList.toggle("on", x === b); }); rodar(); }); });
+  aplicar("outro");
 }
 </script>
 </body>

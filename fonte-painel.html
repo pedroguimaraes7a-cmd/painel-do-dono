@@ -477,6 +477,9 @@ if (typeof document !== "undefined") {
     autonomo:   ["Ar Frio Serviços", "compra de peças e gás", "Manutenção das ferramentas", "Combustível, fornecedor de peças", "Fiado, serviço já feito"],
     geral:      ["Meu Negócio", "compra de material", "Manutenção de equipamento", "Aluguel, fornecedor", "Fiado, encomenda de cliente"]
   };
+  var FORN = { pizzaria: "queijo e massa", lanchonete: "carnes e pães", barbearia: "produtos de barbearia", salao: "cosméticos e gel", padaria: "farinha e ovos",
+    roupa: "roupas", lavarapido: "produtos de limpeza", pet: "ração e shampoo", autonomo: "peças e materiais", geral: "mercadoria" };
+  function forn() { return FORN[S.dados.config.nicho] || FORN.geral; }
   function exN(i) { var k = S.dados ? S.dados.config.nicho : "geral"; return (EXN[k] || EXN.geral)[i]; }
   function titulo(t) { return [el("h1", { text: t }), el("div", { style: "height:12px" })]; }
 
@@ -958,14 +961,14 @@ if (typeof document !== "undefined") {
       var h = hoje(), id = function (i) { return "d" + i + Date.now().toString(36); };
       S.dados.contas = [
         { id: id(1), t: "p", desc: "Aluguel", v: 150000, venc: addDias(h, 2), quem: "", pago: 0, dpago: "", lid: "" },
-        { id: id(2), t: "p", desc: "Fornecedor de ingredientes", v: 90000, venc: addDias(h, -2), quem: "Distribuidora Central", pago: 0, dpago: "", lid: "" },
+        { id: id(2), t: "p", desc: "Fornecedor de " + forn(), v: 90000, venc: addDias(h, -2), quem: "Distribuidora Central", pago: 0, dpago: "", lid: "" },
         { id: id(3), t: "p", desc: "Internet", v: 12000, venc: addDias(h, 9), quem: "", pago: 0, dpago: "", lid: "" },
         { id: id(4), t: "r", desc: "Fiado", v: 8500, venc: addDias(h, -5), quem: "Dona Maria", pago: 0, dpago: "", lid: "" },
         { id: id(5), t: "r", desc: "Encomenda para evento", v: 60000, venc: addDias(h, 3), quem: "Sr. Carlos", pago: 0, dpago: "", lid: "" }
       ];
       S.dados.produtos = [
-        { id: id(6), nome: "Produto exemplo A", c: 1500, o: 250, r: 300, t: 19.5, m: 20, p: 5000 },
-        { id: id(7), nome: "Produto exemplo B", c: 2200, o: 300, r: 300, t: 15, m: 20, p: 3000 }
+        { id: id(6), nome: exPreco()[0], c: 1500, o: 250, r: 300, t: 19.5, m: 20, p: 5000 },
+        { id: id(7), nome: "Outro item (exemplo)", c: 2200, o: 300, r: 300, t: 15, m: 20, p: 3000 }
       ];
       S.dados.config.meta = 1500000;
     }
@@ -1053,6 +1056,7 @@ if (typeof document !== "undefined") {
   function extrairCodigo(t) { t = String(t || "").trim(); var m = t.match(/[#&?]k=([A-Za-z0-9_\-.]+)/); return m ? m[1] : t.replace(/\s+/g, ""); }
   function checarRevogada(o) {
     if (typeof fetch !== "function") return;
+    if (o.x && Date.now() > o.x * 1000) { try { localStorage.removeItem(LREV); } catch (e) {} return; } /* depois do prazo de proteção, o produto é do cliente */
     fetch("../../revogados.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       if (!j || !Array.isArray(j.ids)) return;
       if (j.ids.indexOf(o.i) >= 0) { lsSet(LREV, o.i); if (S.lic.estado !== "revogada") { S.lic = { estado: "revogada", payload: o }; render(); } }
@@ -1063,7 +1067,7 @@ if (typeof document !== "undefined") {
     return verificarLicenca(code, EDICAO, LIC_PUB).then(function (r) {
       if (!r.ok) { S.lic = { estado: "sem", erro: manual ? (r.erro === "edicao" ? "Este código é de outra versão do aplicativo. Confira se você abriu o link certo." : "Código inválido. Confira se copiou o código inteiro, sem cortar o começo ou o fim.") : "" }; render(); return false; }
       lsSet(LK, String(code).trim());
-      if (lsGet(LREV) === r.payload.i) { S.lic = { estado: "revogada", payload: r.payload }; render(); checarRevogada(r.payload); return false; }
+      if (lsGet(LREV) === r.payload.i && !(r.payload.x && Date.now() > r.payload.x * 1000)) { S.lic = { estado: "revogada", payload: r.payload }; render(); checarRevogada(r.payload); return false; }
       S.lic = { estado: "ok", payload: r.payload }; render(); checarRevogada(r.payload); return true;
     });
   }
