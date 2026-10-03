@@ -301,7 +301,7 @@ footer a{color:var(--mut);text-decoration:none}
   <div class="w rv">
     <h2>Chega de adivinhar <span class="grad">quanto sobrou</span>.</h2>
     <p class="sub">Veja os planos, pague com Pix ou cartão e use ainda hoje no seu celular. Garantia de 7 dias.</p>
-    <div class="cta"><a class="btn" href="#planos">Ver planos</a><a class="btn g" href="calculadora/">Calculadora grátis de lucro</a></div>
+    <div class="cta"><a class="btn" href="#planos">Ver planos</a><a class="btn g" href="calculadora/">Calculadora grátis de lucro</a><a class="btn g" id="wa2" href="#" hidden>Tirar dúvidas no WhatsApp</a></div>
   </div>
 </section>
 
@@ -314,7 +314,7 @@ footer a{color:var(--mut);text-decoration:none}
 
 <script>
 // ===== Configure aqui =====
-var WHATSAPP = "";   // número com DDI e DDD, só dígitos. Ex.: 5511999999999
+var WHATSAPP = "5511970558362";   // número com DDI e DDD, só dígitos. Ex.: 5511999999999
 var CHECKOUT = { basico: "", avancado: "", premium: "", raiox: "" };   // links do checkout (Hotmart)
 // ==========================
 var NOMES = { basico: "Básico", avancado: "Avançado", premium: "Premium", raiox: "Raio-X mensal" };
@@ -323,6 +323,8 @@ var NOMES = { basico: "Básico", avancado: "Avançado", premium: "Premium", raio
   function sc() { hd.classList.toggle("s", scrollY > 24); } sc(); addEventListener("scroll", sc, { passive: true });
   var tt = document.getElementById("toast"), tm;
   function aviso(m) { tt.textContent = m; tt.classList.add("on"); clearTimeout(tm); tm = setTimeout(function () { tt.classList.remove("on"); }, 4200); }
+  var w2 = document.getElementById("wa2");
+  if (WHATSAPP && w2) { w2.hidden = false; w2.target = "_blank"; w2.rel = "noopener"; w2.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Vim pelo site e tenho uma dúvida sobre o Meu Painel do Dono."); }
   document.querySelectorAll("[data-buy]").forEach(function (b) {
     b.addEventListener("click", function () {
       var p = b.getAttribute("data-buy");
