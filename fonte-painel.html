@@ -447,7 +447,7 @@ if (typeof document !== "undefined") {
     if (t === "claro") r.setAttribute("data-theme", "light");
     else if (t === "escuro") r.setAttribute("data-theme", "dark");
     else r.removeAttribute("data-theme");
-    var n = S.dados ? nicho() : NICHOS.pizzaria;
+    var n = S.dados ? nicho() : (NICHOS[S.prevNicho] || NICHOS.geral);
     r.style.setProperty("--acc", n.cor); r.style.setProperty("--acc2", n.cor2);
     var tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.setAttribute("content", n.cor);
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><text x="14" y="52" font-size="30">' + n.emoji +
@@ -484,16 +484,18 @@ if (typeof document !== "undefined") {
   function titulo(t) { return [el("h1", { text: t }), el("div", { style: "height:12px" })]; }
 
   function viewOnboarding() {
-    var nome = el("input", { id: "ob-nome", type: "text", maxlength: "60", placeholder: "Ex.: " + EXN.pizzaria[0] });
-    var sel = el("select", { id: "ob-nicho" }, Object.keys(NICHOS).map(function (k) { return el("option", { value: k, text: NICHOS[k].emoji + "  " + NICHOS[k].nome }); }));
-    sel.addEventListener("change", function () { nome.setAttribute("placeholder", "Ex.: " + (EXN[sel.value] || EXN.geral)[0]); });
+    var nome = el("input", { id: "ob-nome", type: "text", maxlength: "60", placeholder: "Ex.: " + EXN.geral[0] });
+    var sel = el("select", { id: "ob-nicho" }, [el("option", { value: "", text: "Escolha o seu tipo de negócio…" })].concat(Object.keys(NICHOS).map(function (k) { return el("option", { value: k, text: NICHOS[k].emoji + "  " + NICHOS[k].nome }); })));
+    var aviso = el("p", { class: "sub", style: "color:var(--bad,#b3261e);display:none;margin:6px 0 0", text: "Escolha o tipo de negócio para eu preparar as categorias certas." });
+    sel.addEventListener("change", function () { nome.setAttribute("placeholder", "Ex.: " + (EXN[sel.value] || EXN.geral)[0]); aviso.style.display = "none"; S.prevNicho = sel.value; aplicarTema(); });
     return el("div", null, [
       el("div", { class: "welcome" }, [el("div", { class: "logo", text: "💰" }), el("h1", { text: "Meu Painel do Dono" + (AV ? " Avançado" : "") }),
         el("p", { class: "sub", text: "Veja o que entrou, o que saiu e quanto sobrou de verdade no seu negócio. Seus dados ficam só neste aparelho." })]),
       el("div", { class: "card" }, [
         el("label", { for: "ob-nome", text: "Nome do seu negócio" }), nome,
-        el("label", { for: "ob-nicho", text: "Tipo de negócio" }), sel,
+        el("label", { for: "ob-nicho", text: "Tipo de negócio" }), sel, aviso,
         el("button", { class: "btn", text: "Começar", onclick: function () {
+          if (!sel.value) { aviso.style.display = "block"; sel.focus(); return; }
           S.dados = { lanc: [], contas: [], produtos: [], config: { negocio: nome.value.trim() || "Meu negócio", nicho: sel.value, tema: "auto", custom: { e: [], s: [] }, meta: 0 } };
           salvar(); render();
         } }),
