@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calculadora de lucro | Bumerân</title>
 <meta name="description" content="Descubra em segundos quanto sobra de verdade em cada venda e qual preço cobrar. Grátis, para qualquer negócio.">
-<meta name="theme-color" content="#050d1f">
+<meta name="theme-color" content="#050d1f"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="../favicon.png">
 <style>
   :root { --navy:#050d1f; --navy2:#0b1a3a; --o1:#ff7a18; --o2:#ff3d00; --card:#fff; --text:#16213a; --mut:#5a6680; --line:#e3e8f2; --bg2:#f3f6fc; --ok:#12805a; --okbg:#e3f6ee; --bad:#c62d2d; --badbg:#fdeaea; --mid:#a55b00; --midbg:#fff2dc; }
@@ -218,5 +218,5 @@ if (typeof document !== "undefined") {
   aplicar("outro");
 }
 </script>
-</body>
+<script>if("serviceWorker"in navigator)addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})</script></body>
 </html>
