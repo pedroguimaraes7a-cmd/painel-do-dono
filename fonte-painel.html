@@ -335,10 +335,12 @@ function validarBackup(obj) {
     produtos.push({ id: String(p.id || ("p" + i)).slice(0, 40), nome: String(p.nome || "").slice(0, 60), c: ci(p.c), o: ci(p.o), r: ci(p.r),
                     t: pc(p.t, 99), m: pc(p.m, 95), p: ci(p.p) });
   });
+  var lb0 = cfg.lembrete && typeof cfg.lembrete === "object" ? cfg.lembrete : {};
+  var lembrete = { on: lb0.on !== false, h: (typeof lb0.h === "number" && lb0.h >= 0 && lb0.h <= 23) ? Math.round(lb0.h) : 20, sem: /^\d{4}-\d{2}-\d{2}$/.test(String(lb0.sem || "")) ? String(lb0.sem) : "" };
   var meta = typeof cfg.meta === "number" && isFinite(cfg.meta) && cfg.meta > 0 ? Math.round(cfg.meta) : 0;
   return { lanc: out, contas: contas, produtos: produtos,
            config: { negocio: String(cfg.negocio || "").slice(0, 60), nicho: NICHOS[cfg.nicho] ? cfg.nicho : "geral",
-                     tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta } };
+                     tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta, lembrete: lembrete } };
 }
 
 /* ---------- Licença (ativação por código assinado) ---------- */
@@ -496,7 +498,7 @@ if (typeof document !== "undefined") {
         el("label", { for: "ob-nicho", text: "Tipo de negócio" }), sel, aviso,
         el("button", { class: "btn", text: "Começar", onclick: function () {
           if (!sel.value) { aviso.style.display = "block"; sel.focus(); return; }
-          S.dados = { lanc: [], contas: [], produtos: [], config: { negocio: nome.value.trim() || "Meu negócio", nicho: sel.value, tema: "auto", custom: { e: [], s: [] }, meta: 0 } };
+          S.dados = { lanc: [], contas: [], produtos: [], config: { negocio: nome.value.trim() || "Meu negócio", nicho: sel.value, tema: "auto", custom: { e: [], s: [] }, meta: 0, lembrete: { on: true, h: 20, sem: "" } } };
           salvar(); render();
         } }),
         el("ul", { class: "steps" }, [el("li", { text: "Toque no botão + para lançar cada venda e cada gasto." }), el("li", { text: "No começo do mês seguinte, veja o resultado na tela Início." }), el("li", { text: "Baixe um backup de vez em quando na aba Mais." })])
@@ -504,9 +506,49 @@ if (typeof document !== "undefined") {
     ]);
   }
 
+  /* ---------- Lembrete do fechamento do dia ---------- */
+  function lemb() { var c = S.dados.config; if (!c.lembrete) c.lembrete = { on: true, h: 20, sem: "" }; return c.lembrete; }
+  function dataOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function temLanc(dia) { return S.dados.lanc.some(function (x) { return x.d === dia; }); }
+  function bannerLembrete() {
+    var lb = lemb(); if (!lb.on || lb.sem === hoje()) return null;
+    var hh = new Date().getHours(), texto = "", titulo = "";
+    if (hh >= lb.h && !temLanc(hoje())) { titulo = "Hora de fechar o dia"; texto = "Você ainda não lançou nada hoje. Leva 2 minutos: lance o que vendeu e o que gastou, para o caixa fechar certo."; }
+    else if (S.dados.lanc.length > 0 && !temLanc(dataOffset(-1)) && [-2, -3, -4, -5, -6, -7].some(function (k) { return temLanc(dataOffset(k)); })) { titulo = "Ontem ficou sem lançamentos"; texto = "Se teve venda ou gasto ontem, lance agora para o seu lucro do mês não ficar errado. Dá para escolher a data na hora de lançar."; }
+    else return null;
+    return el("div", { class: "card", style: "border-left:4px solid var(--acc)" }, [el("h2", { text: titulo }), el("p", { class: "sub", text: texto }),
+      el("button", { class: "btn", text: "Lançar agora", onclick: function () { irPara("lancar"); } }),
+      el("button", { class: "btn sec", text: "Hoje não teve movimento", onclick: function () { lemb().sem = hoje(); salvar(); render(); } })]);
+  }
+  function icsAlarme(h) {
+    var n = new Date(), p = function (x) { return ("0" + x).slice(-2); };
+    var ini = n.getFullYear() + p(n.getMonth() + 1) + p(n.getDate()) + "T" + p(h) + "0000";
+    var stamp = n.getUTCFullYear() + p(n.getUTCMonth() + 1) + p(n.getUTCDate()) + "T" + p(n.getUTCHours()) + p(n.getUTCMinutes()) + p(n.getUTCSeconds()) + "Z";
+    var link = location.origin + location.pathname;
+    return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bumeran//Meu Painel do Dono//PT-BR", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+      "UID:fechamento-dia-" + n.getTime() + "@somosbumeran.com.br", "DTSTAMP:" + stamp, "DTSTART:" + ini, "DURATION:PT15M", "RRULE:FREQ=DAILY",
+      "SUMMARY:Fechar o dia no Meu Painel do Dono", "DESCRIPTION:Lance as vendas e os gastos de hoje. Leva 2 minutos. " + link,
+      "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Hora de fechar o dia no Meu Painel do Dono", "TRIGGER:PT0S", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n") + "\r\n";
+  }
+  function cardLembrete() {
+    var lb = lemb();
+    var chk = el("input", { id: "l-on", type: "checkbox" }); chk.checked = lb.on;
+    chk.addEventListener("change", function () { lb.on = chk.checked; salvar(); aviso(lb.on ? "Aviso ligado" : "Aviso desligado"); });
+    var sel = el("select", { id: "l-hora" }, [12, 14, 16, 17, 18, 19, 20, 21, 22, 23].map(function (h) { return el("option", { value: String(h), text: ("0" + h).slice(-2) + ":00" }); }));
+    sel.value = String(lb.h); if (sel.value !== String(lb.h)) { sel.value = "20"; }
+    sel.addEventListener("change", function () { lb.h = parseInt(sel.value, 10); salvar(); });
+    return el("div", { class: "card" }, [
+      el("h2", { text: "Lembrete do fechamento do dia" }),
+      el("p", { class: "sub", text: "Na correria, é fácil esquecer de lançar o dia. Escolha o horário em que você costuma fechar o caixa." }),
+      el("label", { class: "check", for: "l-on" }, [chk, el("span", { text: "Mostrar aviso no início quando eu esquecer de lançar" })]),
+      el("label", { for: "l-hora", text: "Horário do fechamento" }), sel,
+      el("button", { class: "btn sec", text: "Baixar alarme diário para o calendário", onclick: function () { baixar("alarme-fechamento-do-dia.ics", icsAlarme(parseInt(sel.value, 10)), "text/calendar;charset=utf-8"); aviso("Abra o arquivo para adicionar ao calendário"); } }),
+      el("div", { class: "hint", text: "O aviso aparece quando você abre o aplicativo. Para o celular tocar mesmo com o aplicativo fechado, baixe o alarme: ele cria um evento que se repete todos os dias no calendário do aparelho, com notificação." })
+    ]);
+  }
   function viewInicio() {
     var l = S.dados.lanc, s = resumo(l, S.ym), a = resumo(l, shiftYM(S.ym, -1));
-    var kids = [navMes()];
+    var kids = []; var bl = bannerLembrete(); if (bl) kids.push(bl); kids.push(navMes());
     kids.push(el("div", { class: "hero" }, [
       el("div", { class: "lab" }, [el("span", { text: "Lucro do mês" }), el("span", { text: nicho().emoji })]),
       el("div", { class: "big", text: money(s.lucro) }),
@@ -1002,6 +1044,7 @@ if (typeof document !== "undefined") {
         return ts;
       })()
     ]));
+    kids.push(cardLembrete());
     var minhas = el("div", { class: "card" }, [el("h2", { text: "Minhas categorias" })]);
     var tem = false;
     [["e", "Entradas"], ["s", "Saídas"]].forEach(function (par) {
