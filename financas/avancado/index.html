@@ -113,6 +113,9 @@ var CONTATO_WHATSAPP = "5511970558362";
 var LIC_PUB = {"key_ops":["verify"],"ext":true,"kty":"EC","x":"D9srLTHIDvM2YYzAWvKd52wMGhVrE9diwD5IZQ4EZKs","y":"NmqAnYHAutPxr4-1RmVzP0f0XUf4J6NqEEcA-LaeRZE","crv":"P-256"}; /* chave pública de verificação (injetada no build) */
 var INSTAGRAM_URL = "";
 var AV = EDICAO === "avancado";
+var PRO = AV; /* o Salário do Dono faz parte do Avançado */
+var ROTULO = AV ? "Avançado" : "Básico";
+var REV_URL = ""; /* endereço do serviço automático de revogação (preenchido no build) */
 var CHAVE = "painel_dono_" + EDICAO + "_v1";
 
 /* ===== Capas por nicho. r=1: entrada que é venda. l=1: saída que conta no lucro. k: tipo especial ===== */
@@ -293,6 +296,51 @@ function textoResumo(negocio, mesTexto, s) {
   return "Resumo de " + mesTexto + " - " + negocio + "\nVendas: " + m(s.receita) + "\nCustos e despesas: " + m(s.custos) +
          "\nLucro: " + (s.lucro < 0 ? "-" : "") + m(Math.abs(s.lucro)) + "\nCaixa (entrou menos saiu): " + (s.caixa < 0 ? "-" : "") + m(Math.abs(s.caixa));
 }
+/* ---------- Salário do Dono: o que o dono precisa, a sobra da loja e a divisão em potes ---------- */
+var POTES_PADRAO = [75, 15, 10];
+var POTES_NOMES = ["Para o dono (salário e lucro)", "Reserva", "Crescer"];
+function potesValidos(p) {
+  if (!Array.isArray(p) || p.length !== 3) return false;
+  var t = 0;
+  for (var i = 0; i < 3; i++) { if (typeof p[i] !== "number" || !isFinite(p[i]) || p[i] < 0 || p[i] > 100) return false; t += p[i]; }
+  return Math.abs(t - 100) < 0.001 && p[0] > 0;
+}
+function dividirSobra(sobra, pct) {
+  var n = pct.length;
+  if (!(sobra > 0)) return pct.map(function () { return 0; });
+  var raw = pct.map(function (x) { return sobra * x / 100; });
+  var base = raw.map(function (x) { return Math.floor(x); });
+  var falta = sobra - base.reduce(function (a, b) { return a + b; }, 0);
+  var ord = raw.map(function (x, i) { return { i: i, f: x - Math.floor(x) }; }).sort(function (a, b) { return b.f - a.f || a.i - b.i; });
+  for (var k = 0; k < falta; k++) base[ord[k % n].i]++;
+  return base;
+}
+function mediasRecentes(l, ymFim, n) {
+  var lu = [], re = [];
+  for (var i = 0; i < n; i++) { var r = resumo(l, shiftYM(ymFim, -i)); if (r.qtd > 0) { lu.push(r.lucro); re.push(r.receita); } }
+  if (lu.length < 2) return null;
+  var med = function (v) { return Math.round(v.reduce(function (a, b) { return a + b; }, 0) / v.length); };
+  return { sobra: med(lu), vendas: med(re), meses: lu.length };
+}
+function mediaSobra(l, ymFim, n) { var m = mediasRecentes(l, ymFim, n); return m ? m.sobra : null; }
+function salarioDono(l, ym, pro, ymHoje) {
+  var pct = pro && potesValidos(pro.pot) ? pro.pot : POTES_PADRAO;
+  var s = resumo(l, ym);
+  var sobra = s.lucro, potes = dividirSobra(sobra, pct);
+  var recomendado = potes[0], retirado = s.retiradas;
+  var fim = ym === ymHoje ? shiftYM(ym, -1) : ym;
+  var m = mediasRecentes(l, fim, 3);
+  var media = m ? m.sobra : null;
+  var sustenta = media !== null && media > 0 ? Math.floor(media * pct[0] / 100) : 0;
+  var custo = pro && pro.custo > 0 ? pro.custo : 0;
+  var precisaSobra = custo > 0 ? Math.ceil(custo * 100 / pct[0]) : 0;
+  var pe = pontoEquilibrio(l, fim);
+  var vendasNec = custo > 0 && pe.pe !== null ? Math.ceil((pe.fixos + precisaSobra) / pe.margem) : null;
+  return { sobra: sobra, pct: pct, potes: potes, recomendado: recomendado, retirado: retirado, resta: recomendado - retirado,
+           media: media, mediaVendas: m ? m.vendas : null, sustenta: sustenta, custo: custo, precisaSobra: precisaSobra, vendasNec: vendasNec,
+           cobre: custo > 0 && media !== null ? sustenta >= custo : null, qtd: s.qtd, emAndamento: ym === ymHoje };
+}
+
 function validarBackup(obj) {
   if (!obj || typeof obj !== "object" || !Array.isArray(obj.lanc)) return null;
   var out = [];
@@ -337,10 +385,12 @@ function validarBackup(obj) {
   });
   var lb0 = cfg.lembrete && typeof cfg.lembrete === "object" ? cfg.lembrete : {};
   var lembrete = { on: lb0.on !== false, h: (typeof lb0.h === "number" && lb0.h >= 0 && lb0.h <= 23) ? Math.round(lb0.h) : 20, sem: /^\d{4}-\d{2}-\d{2}$/.test(String(lb0.sem || "")) ? String(lb0.sem) : "" };
+  var pr0 = cfg.pro && typeof cfg.pro === "object" ? cfg.pro : {};
+  var pro = { custo: typeof pr0.custo === "number" && isFinite(pr0.custo) && pr0.custo > 0 && pr0.custo < 1e10 ? Math.round(pr0.custo) : 0, pot: potesValidos(pr0.pot) ? pr0.pot.slice(0, 4) : POTES_PADRAO.slice() };
   var meta = typeof cfg.meta === "number" && isFinite(cfg.meta) && cfg.meta > 0 ? Math.round(cfg.meta) : 0;
   return { lanc: out, contas: contas, produtos: produtos,
            config: { negocio: String(cfg.negocio || "").slice(0, 60), nicho: NICHOS[cfg.nicho] ? cfg.nicho : "geral",
-                     tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta, lembrete: lembrete } };
+                     tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta, lembrete: lembrete, pro: pro, som: cfg.som !== false } };
 }
 
 /* ---------- Licença (ativação por código assinado) ---------- */
@@ -366,7 +416,7 @@ if (typeof module !== "undefined") {
   module.exports = { verificarLicenca: verificarLicenca, resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
                      shiftYM: shiftYM, validarBackup: validarBackup, NICHOS: NICHOS, categoriasDe: categoriasDe,
                      novaCategoria: novaCategoria, textoResumo: textoResumo, ehFixo: ehFixo, addDias: addDias, diasEntre: diasEntre,
-                     fixosBase: fixosBase, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo,
+                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo,
                      resumoContas: resumoContas, statusConta: statusConta };
 }
 
@@ -386,6 +436,7 @@ if (typeof document !== "undefined") {
           o.config.custom = o.config.custom || { e: [], s: [] };
           o.config.tema = o.config.tema || "auto";
           o.config.meta = o.config.meta || 0;
+          if (!o.config.pro || !potesValidos(o.config.pro.pot)) o.config.pro = { custo: (o.config.pro && o.config.pro.custo) || 0, pot: POTES_PADRAO.slice() };
           o.contas = Array.isArray(o.contas) ? o.contas : [];
           o.produtos = Array.isArray(o.produtos) ? o.produtos : [];
           return o;
@@ -491,14 +542,14 @@ if (typeof document !== "undefined") {
     var aviso = el("p", { class: "sub", style: "color:var(--bad,#b3261e);display:none;margin:6px 0 0", text: "Escolha o tipo de negócio para eu preparar as categorias certas." });
     sel.addEventListener("change", function () { nome.setAttribute("placeholder", "Ex.: " + (EXN[sel.value] || EXN.geral)[0]); aviso.style.display = "none"; S.prevNicho = sel.value; aplicarTema(); });
     return el("div", null, [
-      el("div", { class: "welcome" }, [el("div", { class: "logo", text: "💰" }), el("h1", { text: "Meu Painel do Dono" + (AV ? " Avançado" : "") }),
+      el("div", { class: "welcome" }, [el("div", { class: "logo", text: "💰" }), el("h1", { text: "Meu Painel do Dono" + (AV ? " " + ROTULO : "") }),
         el("p", { class: "sub", text: "Veja o que entrou, o que saiu e quanto sobrou de verdade no seu negócio. Seus dados ficam só neste aparelho." })]),
       el("div", { class: "card" }, [
         el("label", { for: "ob-nome", text: "Nome do seu negócio" }), nome,
         el("label", { for: "ob-nicho", text: "Tipo de negócio" }), sel, aviso,
         el("button", { class: "btn", text: "Começar", onclick: function () {
           if (!sel.value) { aviso.style.display = "block"; sel.focus(); return; }
-          S.dados = { lanc: [], contas: [], produtos: [], config: { negocio: nome.value.trim() || "Meu negócio", nicho: sel.value, tema: "auto", custom: { e: [], s: [] }, meta: 0, lembrete: { on: true, h: 20, sem: "" } } };
+          S.dados = { lanc: [], contas: [], produtos: [], config: { negocio: nome.value.trim() || "Meu negócio", nicho: sel.value, tema: "auto", custom: { e: [], s: [] }, meta: 0, lembrete: { on: true, h: 20, sem: "" }, pro: { custo: 0, pot: POTES_PADRAO.slice() }, som: true } };
           salvar(); render();
         } }),
         el("ul", { class: "steps" }, [el("li", { text: "Toque no botão + para lançar cada venda e cada gasto." }), el("li", { text: "No começo do mês seguinte, veja o resultado na tela Início." }), el("li", { text: "Baixe um backup de vez em quando na aba Mais." })])
@@ -546,6 +597,141 @@ if (typeof document !== "undefined") {
       el("div", { class: "hint", text: "O aviso aparece quando você abre o aplicativo. Para o celular tocar mesmo com o aplicativo fechado, baixe o alarme: ele cria um evento que se repete todos os dias no calendário do aparelho, com notificação." })
     ]);
   }
+
+  /* ---------- Sons (ligados por padrão; dá para desligar em Mais) ---------- */
+  var audioCtx = null;
+  function somLigado() { return !S.dados || S.dados.config.som !== false; }
+  function tocar(tipo) {
+    if (!somLigado()) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var t0 = audioCtx.currentTime + 0.01;
+      function nota(f, ini, dur, vol, onda, f2) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = onda || "sine"; o.frequency.setValueAtTime(f, t0 + ini);
+        if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + ini + dur);
+        g.gain.setValueAtTime(0.0001, t0 + ini);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + ini + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur);
+        o.connect(g); g.connect(audioCtx.destination); o.start(t0 + ini); o.stop(t0 + ini + dur + 0.05);
+      }
+      if (tipo === "moeda") { nota(988, 0, 0.09, 0.16, "square"); nota(1319, 0.08, 0.38, 0.16, "square"); nota(2638, 0.08, 0.2, 0.04, "sine"); }
+      else if (tipo === "pop") { nota(620, 0, 0.11, 0.22, "sine", 180); }
+      else if (tipo === "meta") { [523, 659, 784, 1047].forEach(function (f, i) { nota(f, i * 0.1, 0.28, 0.14, "triangle"); }); }
+    } catch (e) {}
+  }
+  function cardSom() {
+    var chk = el("input", { id: "s-on", type: "checkbox" }); chk.checked = somLigado();
+    chk.addEventListener("change", function () { S.dados.config.som = chk.checked; salvar(); if (chk.checked) tocar("moeda"); aviso(chk.checked ? "Sons ligados" : "Sons desligados"); });
+    return el("div", { class: "card" }, [
+      el("h2", { text: "Sons" }),
+      el("label", { class: "check", for: "s-on" }, [chk, el("span", { text: "Tocar um sonzinho ao lançar uma venda ou um gasto" })]),
+      el("button", { class: "btn sec", text: "Ouvir como é", onclick: function () { var ligado = somLigado(); S.dados.config.som = true; tocar("moeda"); S.dados.config.som = ligado; } }),
+      el("div", { class: "hint", text: "Uma moedinha para cada venda e um estalo suave para cada gasto. Se o celular estiver no silencioso, ele respeita." })
+    ]);
+  }
+
+  /* ---------- Salário do Dono (Avançado) ---------- */
+  function pctFmt(n) { return String(Math.round(n * 10) / 10).replace(".", ",") + "%"; }
+  function resumoSalario() { return salarioDono(S.dados.lanc, S.ym, S.dados.config.pro, hoje().slice(0, 7)); }
+  function dica(txt, ok) { return el("div", { class: "tip", style: ok ? "background:var(--card);border-left-color:var(--in);color:var(--text)" : "", text: txt }); }
+  function cardInicioSalario() {
+    var r = resumoSalario();
+    var linha = r.sobra > 0 ? "Pelo que sobrou até agora, a parte do dono é " + money(r.recomendado) + ". Você retirou " + money(r.retirado) + "." : "Ainda não sobrou dinheiro neste mês para o dono.";
+    return el("div", { class: "card", style: "border-left:4px solid var(--acc)" }, [el("h2", { text: "Salário do dono" }), el("p", { class: "sub", text: linha }),
+      el("button", { class: "btn sec", text: "Abrir o Salário do Dono", onclick: function () { irPara("salario"); } })]);
+  }
+  function viewSalario() {
+    var cfg = S.dados.config; if (!cfg.pro) cfg.pro = { custo: 0, pot: POTES_PADRAO.slice() };
+    var r = resumoSalario();
+    var kids = titulo("Salário do Dono").concat([navMes()]);
+    kids.push(el("p", { class: "sub", text: "Dono que mistura o dinheiro da loja com o dele nunca sabe se o negócio dá lucro. Aqui o aplicativo faz a conta por você, com base no que você lançou." }));
+    /* 1. quanto o dono precisa */
+    var cv = el("input", { id: "cv", type: "text", inputmode: "decimal", placeholder: "Ex.: 3200,00", value: fmtIn(r.custo), autocomplete: "off" });
+    var c1 = el("div", { class: "card" }, [el("h2", { text: "1. Quanto você precisa para viver" }),
+      el("p", { class: "sub", text: "Some o que você gasta por mês para manter a sua casa: aluguel, comida, transporte, saúde, escola, lazer. Não inclua gastos da loja. É esse valor que o negócio precisa gerar para você." }),
+      el("label", { for: "cv", text: "Meu custo de vida por mês (R$)" }), cv,
+      el("button", { class: "btn sec", text: "Salvar", onclick: function () { var v = moneyOuZero(cv.value); if (v === null) { aviso("Digite um valor válido"); return; } cfg.pro.custo = v; salvar(); aviso("Salvo"); } })]);
+    if (r.custo > 0) {
+      c1.appendChild(el("div", { class: "hint", text: "Como " + pctFmt(r.pct[0]) + " da sobra da loja é do dono, para pagar " + money(r.custo) + " a loja precisa sobrar cerca de:" }));
+      c1.appendChild(el("div", { class: "big", text: money(r.precisaSobra) + " por mês" }));
+      if (r.vendasNec !== null) {
+        c1.appendChild(el("div", { class: "hint", text: "Pelas suas margens e custos fixos dos últimos meses, isso pede vendas de cerca de " + money(r.vendasNec) + " por mês." + (r.mediaVendas !== null ? " Hoje você vende em média " + money(r.mediaVendas) + "." : "") }));
+        if (r.mediaVendas !== null) c1.appendChild(r.mediaVendas >= r.vendasNec ? dica("Dentro da meta: as suas vendas médias já cobrem o seu custo de vida.", true) : dica("Faltam cerca de " + money(r.vendasNec - r.mediaVendas) + " em vendas por mês para o negócio pagar o seu custo de vida. Caminhos: vender mais, cobrar o preço certo ou cortar custos da loja.", false));
+      } else c1.appendChild(el("div", { class: "hint", text: "Com 2 ou mais meses de vendas e custos fixos lançados, o aplicativo também mostra quanto a loja precisa vender." }));
+    }
+    kids.push(c1);
+    /* 2. sobra */
+    var c2 = el("div", { class: "card" }, [el("h2", { text: "2. A sobra da loja neste mês" }),
+      el("div", { class: "big " + (r.sobra < 0 ? "neg" : "pos"), text: money(r.sobra) }),
+      el("div", { class: "hint", text: "É o que sobrou das vendas depois de pagar todos os custos e despesas do negócio, antes de você tirar o seu dinheiro." })]);
+    if (r.emAndamento) c2.appendChild(el("div", { class: "hint", text: "O mês ainda não terminou: o valor muda conforme você lança." }));
+    if (r.qtd === 0) c2.appendChild(dica("Ainda não há lançamentos neste mês.", false));
+    else if (r.sobra <= 0) c2.appendChild(dica("Neste mês as despesas já passaram das vendas, então não há sobra para dividir. Veja no Painel para onde o dinheiro foi e em Preços se o valor cobrado cobre os custos.", false));
+    kids.push(c2);
+    /* 3. potes */
+    var c3 = el("div", { class: "card" }, [el("h2", { text: "3. Para onde vai a sobra" })]);
+    var cores = ["var(--acc)", "#1e7a4c", "#1f3a68"];
+    r.potes.forEach(function (v, i) {
+      c3.appendChild(el("div", { class: "rank" }, [el("div", { class: "row" }, [el("span", { text: POTES_NOMES[i] + " (" + pctFmt(r.pct[i]) + ")" }), el("b", { text: money(v) })]),
+        el("div", { class: "bar", style: "width:" + Math.max(3, Math.round(r.pct[i])) + "%;background:" + cores[i] })]));
+    });
+    c3.appendChild(el("div", { class: "hint", text: "Dono: é o seu salário e o seu lucro. Uma parte você tira todo mês, como salário fixo, e o resto pode retirar no fim do mês. Reserva: é o caixa para os meses fracos. Crescer: é para equipamento, estoque e propaganda, as oportunidades de crescer o negócio. Guarde cada parte separada, em contas ou envelopes diferentes." }));
+    var ins = POTES_NOMES.map(function (n, i) { return el("input", { id: "pt" + i, type: "text", inputmode: "decimal", value: String(r.pct[i]).replace(".", ","), autocomplete: "off" }); });
+    if (S.editaPotes !== true) {
+      c3.appendChild(el("button", { class: "btn sec", text: "Mudar as porcentagens", onclick: function () { S.editaPotes = true; render(); } }));
+    } else {
+      ["Dono (%)", "Reserva (%)", "Crescer (%)"].forEach(function (n, i) { c3.appendChild(el("label", { for: "pt" + i, text: n })); c3.appendChild(ins[i]); });
+      c3.appendChild(el("button", { class: "btn", text: "Salvar porcentagens", onclick: function () {
+        var v = ins.map(function (x) { return parsePct(x.value); });
+        if (v.some(function (x) { return x === null; }) || !potesValidos(v)) { aviso("As três porcentagens precisam somar 100"); return; }
+        cfg.pro.pot = v; S.editaPotes = false; salvar(); aviso("Porcentagens salvas");
+      } }));
+      c3.appendChild(el("button", { class: "btn sec", text: "Voltar ao padrão (75, 15 e 10)", onclick: function () { cfg.pro.pot = POTES_PADRAO.slice(); S.editaPotes = false; salvar(); aviso("Padrão restaurado"); } }));
+    }
+    kids.push(c3);
+    /* 4. quanto retirou */
+    var c4 = el("div", { class: "card" }, [el("h2", { text: "4. Quanto você já tirou" }),
+      el("div", { class: "grid2" }, [mini("Parte do dono", money(r.recomendado)), mini("Você retirou", money(r.retirado), r.retirado > r.recomendado && r.retirado > 0 ? "neg" : "")])]);
+    if (r.retirado === 0) c4.appendChild(el("div", { class: "hint", text: "Sempre que tirar dinheiro para você, lance como \"Retirada do dono\". Assim o aplicativo separa o seu dinheiro das despesas da loja." }));
+    if (r.sobra <= 0 && r.retirado > 0) c4.appendChild(dica("Este mês não sobrou dinheiro, mas você retirou " + money(r.retirado) + ". Essa retirada saiu do caixa, não do lucro. Se isso virar hábito, o negócio fica sem fôlego.", false));
+    else if (r.retirado > r.recomendado) c4.appendChild(dica("Você retirou " + money(r.retirado - r.recomendado) + " a mais do que a parte do dono. Esse excesso saiu da reserva e do dinheiro de crescer.", false));
+    else if (r.sobra > 0) c4.appendChild(dica("Dentro do combinado. Ainda dá para retirar até " + money(r.resta) + " neste mês.", true));
+    kids.push(c4);
+    /* 5. o negócio sustenta? */
+    var c5 = el("div", { class: "card" }, [el("h2", { text: "5. O que o negócio sustenta" })]);
+    if (r.media === null) c5.appendChild(el("div", { class: "hint", text: "Com 2 ou mais meses de lançamentos, o aplicativo mostra aqui quanto o seu negócio sustenta de forma segura e se isso cobre o seu custo de vida." }));
+    else {
+      c5.appendChild(el("div", { class: "big", text: money(r.sustenta) }));
+      c5.appendChild(el("div", { class: "hint", text: "É " + pctFmt(r.pct[0]) + " da sobra média dos últimos meses (" + money(r.media) + "). Regra de ouro: só aumente o que você tira quando a média dos últimos 3 meses sustentar o novo valor. Antes disso, não." }));
+      if (r.custo > 0) c5.appendChild(r.cobre ? dica("Cabe. O negócio sustenta " + money(r.sustenta) + " e o seu custo de vida é " + money(r.custo) + ".", true)
+        : dica("Hoje não cabe: o negócio sustenta " + money(r.sustenta) + " e o seu custo de vida é " + money(r.custo) + ". Tirar a mais só adia o problema. Há dois caminhos: aumentar a sobra (preço certo, menos custo, mais vendas) ou diminuir o custo de vida.", false));
+    }
+    kids.push(c5);
+    /* 6. histórico */
+    var c6 = el("div", { class: "card" }, [el("h2", { text: "Últimos meses" })]);
+    var temH = false;
+    for (var i = 0; i < 6; i++) {
+      var ym = shiftYM(S.ym, -i), x = salarioDono(S.dados.lanc, ym, cfg.pro, hoje().slice(0, 7));
+      if (x.qtd === 0) continue; temH = true;
+      c6.appendChild(el("div", { class: "item" }, [el("span", { class: "l" }, [nomeMes(ym), el("small", { text: "Sobra " + money(x.sobra) })]),
+        el("span", { class: "r" }, [el("b", { text: money(x.retirado) }), el("small", { class: "sub", text: " de " + money(x.recomendado) })])]));
+    }
+    c6.appendChild(el("div", { class: "hint", text: temH ? "Cada linha mostra o que você retirou, de quanto era a parte do dono naquele mês." : "Os meses com lançamentos aparecem aqui: quanto você retirou, de quanto era a parte do dono." }));
+    kids.push(c6);
+    /* 7. separação */
+    kids.push(el("div", { class: "card" }, [el("h2", { text: "Pessoa física e jurídica: não misture" }),
+      el("div", { class: "item" }, [el("span", { text: "1. Pague você mesmo uma vez por mês, num dia fixo, sempre pelo mesmo caminho." })]),
+      el("div", { class: "item" }, [el("span", { text: "2. Não pague conta de casa, mercado ou lazer com o dinheiro da loja. Se precisar, lance como Retirada do dono." })]),
+      el("div", { class: "item" }, [el("span", { text: "3. Não pague gasto da loja com o seu dinheiro sem anotar. Lance como compra ou despesa." })]),
+      el("div", { class: "item" }, [el("span", { text: "4. Se puder, tenha uma conta só da loja e outra só sua." })]),
+      el("div", { class: "item" }, [el("span", { text: "5. Guarde a reserva fora da conta do dia a dia." })]),
+      el("p", { class: "hint", text: "Estas são divisões de gestão do caixa. O pró-labore formal da empresa, com INSS e imposto de renda, depende do regime tributário e deve ser definido com o seu contador. O aplicativo não substitui contador nem dá orientação fiscal." })]));
+    return el("div", null, kids);
+  }
+
   function viewInicio() {
     var l = S.dados.lanc, s = resumo(l, S.ym), a = resumo(l, shiftYM(S.ym, -1));
     var kids = []; var bl = bannerLembrete(); if (bl) kids.push(bl); kids.push(navMes());
@@ -554,6 +740,7 @@ if (typeof document !== "undefined") {
       el("div", { class: "big", text: money(s.lucro) }),
       el("div", { class: "row" }, [el("div", null, ["Vendas", el("b", { text: money(s.receita) })]), el("div", null, ["Custos e despesas", el("b", { text: money(s.custos) })])])
     ]));
+    if (PRO) kids.push(cardInicioSalario());
     kids.push(el("div", { class: "card" }, [
       el("h2", { text: "Caixa: o dinheiro que sobrou" }),
       el("div", { class: "big " + (s.caixa < 0 ? "neg" : "pos"), text: money(s.caixa) }),
@@ -631,8 +818,11 @@ if (typeof document !== "undefined") {
             if (r.erro) { aviso(r.erro); return; }
             S.dados.config.custom[S.tipo].push(r.cat); c = r.cat;
           } else c = cats[parseInt(sel.value, 10)];
+          var ymN = data.value.slice(0, 7), antes = resumo(S.dados.lanc, ymN).receita, metaV = S.dados.config.meta || 0;
           S.dados.lanc.push(montaLanc(data.value, S.tipo, c, v, obs.value.trim()));
-          salvar(); S.ym = data.value.slice(0, 7); S.view = "inicio"; S.novaCat = false; aviso("Lançamento salvo");
+          var batida = AV && S.tipo === "e" && metaV > 0 && antes < metaV && resumo(S.dados.lanc, ymN).receita >= metaV;
+          tocar(batida ? "meta" : S.tipo === "e" ? "moeda" : "pop");
+          salvar(); S.ym = ymN; S.view = "inicio"; S.novaCat = false; aviso(batida ? "Meta do mês batida! Parabéns!" : "Lançamento salvo");
         } })
       ])
     ]));
@@ -916,6 +1106,7 @@ if (typeof document !== "undefined") {
   function viewPainel() {
     var l = S.dados.lanc, s = resumo(l, S.ym), a = resumo(l, shiftYM(S.ym, -1));
     var kids = titulo("Painel").concat([navMes()]);
+    if (PRO) kids.push(el("button", { class: "btn", text: "Salário do Dono: quanto posso tirar", onclick: function () { irPara("salario"); } }));
     if (AV) kids = kids.concat(cardsMetaEquilibrio(s));
     var comp = el("div", { class: "card" }, [el("h2", { text: "Este mês contra o anterior" })]);
     [["Vendas", s.receita, a.receita], ["Custos e despesas", s.custos, a.custos], ["Lucro", s.lucro, a.lucro]].forEach(function (r) {
@@ -1045,6 +1236,8 @@ if (typeof document !== "undefined") {
       })()
     ]));
     kids.push(cardLembrete());
+    kids.push(cardSom());
+    if (!AV) kids.push(el("div", { class: "card" }, [el("h2", { text: "Quanto posso tirar para mim?" }), el("p", { class: "sub", text: "No Avançado, o aplicativo mostra quanto o seu negócio precisa vender para pagar o seu custo de vida, divide a sobra do mês entre você, a reserva e o crescimento e avisa quando você tira demais." }), el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", href: "../", text: "Conhecer o Avançado" })]));
     var minhas = el("div", { class: "card" }, [el("h2", { text: "Minhas categorias" })]);
     var tem = false;
     [["e", "Entradas"], ["s", "Saídas"]].forEach(function (par) {
@@ -1102,7 +1295,8 @@ if (typeof document !== "undefined") {
   function checarRevogada(o) {
     if (typeof fetch !== "function") return;
     if (o.x && Date.now() > o.x * 1000) { try { localStorage.removeItem(LREV); } catch (e) {} return; } /* depois do prazo de proteção, o produto é do cliente */
-    fetch("../../revogados.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    var buscar = function (u) { return fetch(u, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }); };
+    (REV_URL ? buscar(REV_URL).catch(function () { return null; }).then(function (j) { return j && Array.isArray(j.ids) ? j : buscar("../../revogados.json"); }) : buscar("../../revogados.json")).then(function (j) {
       if (!j || !Array.isArray(j.ids)) return;
       if (j.ids.indexOf(o.i) >= 0) { lsSet(LREV, o.i); if (S.lic.estado !== "revogada") { S.lic = { estado: "revogada", payload: o }; render(); } }
       else if (lsGet(LREV) === o.i) { try { localStorage.removeItem(LREV); } catch (e) {} }
@@ -1125,7 +1319,7 @@ if (typeof document !== "undefined") {
   }
   function viewLicenca() {
     var rev = S.lic.estado === "revogada";
-    var kids = [el("div", { class: "top" }, [el("div", { class: "logo", text: "🔑" }), el("div", null, [el("h1", { text: "Meu Painel do Dono" }), el("div", { class: "sub", text: AV ? "Versão Avançado" : "Versão Básico" })])])];
+    var kids = [el("div", { class: "top" }, [el("div", { class: "logo", text: "🔑" }), el("div", null, [el("h1", { text: "Meu Painel do Dono" }), el("div", { class: "sub", text: "Versão " + ROTULO })])])];
     if (rev) {
       kids.push(el("div", { class: "card" }, [el("h2", { text: "Licença desativada" }),
         el("p", { class: "sub", text: "O acesso a este aplicativo foi encerrado (por exemplo, por devolução da compra). Seus dados continuam só no seu celular: baixe uma cópia antes de sair." }),
@@ -1149,7 +1343,7 @@ if (typeof document !== "undefined") {
   var TABS = AV
     ? [["inicio", "Início"], ["hist", "Histórico"], ["contas", "Contas"], ["lancar", "Lançar"], ["precos", "Preços"], ["painel", "Painel"], ["mais", "Mais"]]
     : [["inicio", "Início"], ["hist", "Histórico"], ["lancar", "Lançar"], ["painel", "Painel"], ["mais", "Mais"]];
-  var VIEWS = { inicio: viewInicio, lancar: viewLancar, hist: viewHist, painel: viewPainel, mais: viewMais, contas: viewContas, precos: viewPrecos, relatorio: viewRelatorio };
+  var VIEWS = { inicio: viewInicio, lancar: viewLancar, hist: viewHist, painel: viewPainel, mais: viewMais, contas: viewContas, precos: viewPrecos, relatorio: viewRelatorio, salario: viewSalario };
   function render() {
     app.textContent = "";
     var tabs = document.getElementById("tabs"), tin = document.getElementById("tabsin");
@@ -1166,7 +1360,7 @@ if (typeof document !== "undefined") {
     tabs.style.display = "block";
     TABS.forEach(function (t) {
       var fab = t[0] === "lancar";
-      var ativo = S.view === t[0] || (t[0] === "painel" && S.view === "relatorio");
+      var ativo = S.view === t[0] || (t[0] === "painel" && (S.view === "relatorio" || S.view === "salario"));
       tin.appendChild(el("button", { class: (ativo ? "on" : "") + (fab ? " fab" : ""), "aria-label": t[1], onclick: function () { irPara(t[0]); },
         html: ICONES[t[0]] + (fab ? "" : "<span>" + t[1] + "</span>") }));
     });
@@ -1177,6 +1371,7 @@ if (typeof document !== "undefined") {
     if (semArmazenamento) app.appendChild(el("div", { class: "tip", text: "Este navegador não está guardando os dados. Saia do modo anônimo ou baixe o backup com frequência." }));
     var f = VIEWS[S.view] || viewInicio;
     if ((S.view === "contas" || S.view === "precos" || S.view === "relatorio") && !AV) f = viewInicio;
+    if (S.view === "salario" && !PRO) f = viewInicio;
     app.appendChild(f());
     if (S.toast) app.appendChild(el("div", { class: "toast noprint", text: S.toast }));
   }

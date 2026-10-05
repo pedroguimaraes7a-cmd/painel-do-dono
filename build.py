@@ -9,7 +9,9 @@ assert "var LIC_PUB = null;" in src
 src=src.replace("var LIC_PUB = null;","var LIC_PUB = "+PUB+";",1)
 ED={"basico":dict(title="Meu Painel do Dono",short="Meu Painel",theme="#a8322a",v="painel-basico-v1"),
     "avancado":dict(title="Meu Painel do Dono Avançado",short="Painel Av.",theme="#1f3a68",v="painel-avancado-v1")}
-def tint(im):
+REV=os.environ.get("REV_URL","")
+src=src.replace('var REV_URL = "";','var REV_URL = '+json.dumps(REV)+';',1)
+def tint(im,k=(0.22,0.36,0.66)):
     a=np.array(im.convert("RGBA")).astype(float)
     rgb=a[...,:3]/255
     mx=rgb.max(-1); mn=rgb.min(-1); d=mx-mn
@@ -18,9 +20,9 @@ def tint(im):
     out=a.copy()
     # vermelho -> azul marinho (troca canais r<->b e escurece um pouco)
     nr=b[red]*255*0+ (rgb[...,2][red]*0.6+ rgb[...,0][red]*0.15)*255
-    out[...,0][red]=rgb[...,0][red]*255*0.22
-    out[...,1][red]=rgb[...,0][red]*255*0.36
-    out[...,2][red]=rgb[...,0][red]*255*0.66
+    out[...,0][red]=rgb[...,0][red]*255*k[0]
+    out[...,1][red]=rgb[...,0][red]*255*k[1]
+    out[...,2][red]=rgb[...,0][red]*255*k[2]
     return Image.fromarray(out.clip(0,255).astype("uint8"),"RGBA")
 for ed,c in ED.items():
     d=f"{OLD}/{ed}"; os.makedirs(d,exist_ok=True)
@@ -31,7 +33,7 @@ for ed,c in ED.items():
     open(f"{d}/index.html","w",encoding="utf-8").write(h)
     m=json.load(open(f"{OLD}/manifest.webmanifest"))
     m["name"]=c["title"]; m["short_name"]=c["short"]; m["theme_color"]=c["theme"]
-    if ed=="avancado": m["description"]="Controle de caixa, lucro, preços, contas a pagar e receber e metas do seu negócio."
+    if ed=="avancado": m["description"]="Controle de caixa, lucro, preços, contas a pagar e receber, metas e salário do dono."
     json.dump(m,open(f"{d}/manifest.webmanifest","w"),ensure_ascii=False,indent=2)
     sw=open(f"{OLD}/sw.js").read().replace('"painel-v1"',f'"{c["v"]}"')
     open(f"{d}/sw.js","w").write(sw)
