@@ -148,6 +148,14 @@ footer a{color:var(--mut);text-decoration:none}footer a:hover{color:#fff}
 .rv.in{opacity:1;transform:none}
 .rv.d1{transition-delay:.12s}.rv.d2{transition-delay:.24s}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.ln{stroke-dashoffset:0}.stack i{width:var(--w)}}
+
+.rxh{margin-top:24px;border:1px solid rgba(255,113,0,.55);background:linear-gradient(135deg,rgba(255,113,0,.14),rgba(24,82,190,.12));border-radius:20px;padding:18px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.rxh b{color:#fff}.rxh span{color:var(--mut);flex:1;min-width:220px;font-size:15px}
+.rxh a{color:var(--o1);font-weight:800;text-decoration:none;white-space:nowrap}
+.center{text-align:center}.center .sub{margin-inline:auto}
+.rxs{background:radial-gradient(800px 380px at 50% 0,rgba(255,113,0,.14),transparent 70%)}
+.rxs .g3{display:grid;gap:16px}@media(min-width:860px){.rxs .g3{grid-template-columns:repeat(3,1fr)}}
+.rxs .g3 .card h3{font-size:19px}
 </style>
 </head>
 <body>
@@ -279,7 +287,8 @@ footer a{color:var(--mut);text-decoration:none}footer a:hover{color:#fff}
         <div>Básico<strong>R$ 47</strong>pagamento único</div>
         <div>Avançado<strong>R$ 97</strong>pagamento único</div>
       </div>
-      <div class="cta" style="margin-top:0"><a class="btn" href="financas/">Ver planos e preços</a><a class="btn g" href="financas/calculadora/">Calculadora grátis de lucro</a></div>
+      <div class="rxh"><span><b>+ Raio-X Bumerân, opcional:</b> todo mês você envia o backup e recebe os 3 pontos que merecem atenção no seu negócio. R$ 29,90/mês.</span><a href="financas/#raiox">Saiba mais →</a></div>
+      <div class="cta" style="margin-top:18px"><a class="btn" href="financas/">Ver planos e preços</a><a class="btn g" href="financas/calculadora/">Calculadora grátis de lucro</a></div>
     </div>
   </div>
 </section>
@@ -311,10 +320,24 @@ footer a{color:var(--mut);text-decoration:none}footer a:hover{color:#fff}
   </div>
 </section>
 
+<section class="rxs" id="raiox">
+  <div class="w">
+    <div class="head center rv"><span class="eyebrow">Raio-X Bumerân</span><h2>Registrar é o começo. <span class="grad">Revisar todo mês</span> é o que muda o jogo.</h2>
+      <p class="sub">O aplicativo mostra os números. O Raio-X mostra o que olhar neles, uma vez por mês, por R$ 29,90.</p></div>
+    <div class="g3">
+      <div class="card rv"><h3>1. Você envia o backup</h3><p style="color:var(--mut);margin:8px 0 0">Uma vez por mês, direto do aplicativo, pelo WhatsApp.</p></div>
+      <div class="card rv d1"><h3>2. A gente revisa</h3><p style="color:var(--mut);margin:8px 0 0">Olhamos caixa, lucro, custos e contas a receber do seu negócio.</p></div>
+      <div class="card rv d2"><h3>3. Você recebe 3 pontos</h3><p style="color:var(--mut);margin:8px 0 0">Um resumo simples com o que merece atenção. Cancele quando quiser.</p></div>
+    </div>
+    <div class="cta" style="justify-content:center;margin-top:28px"><a class="btn" href="financas/#raiox">Conhecer o Raio-X</a><a class="btn g" href="financas/#planos">Ver os planos</a></div>
+    <p class="note">Análise gerencial dos dados que você mesmo lança. Não substitui contador nem é orientação fiscal, e não garante resultados.</p>
+  </div>
+</section>
+
 <section>
   <div class="w">
     <div class="nums">
-      <div class="card rv"><strong><span data-n="0">0</span></strong><span>mensalidade</span></div>
+      <div class="card rv"><strong><span data-n="0">0</span></strong><span>mensalidade no aplicativo</span></div>
       <div class="card rv d1"><strong><span data-n="100">0</span>%</strong><span>dos dados no seu aparelho</span></div>
       <div class="card rv d2"><strong><span data-n="10">0</span></strong><span>tipos de negócio prontos</span></div>
       <div class="card rv d2"><strong><span data-n="3">0</span> min</strong><span>para começar a usar</span></div>
@@ -330,7 +353,7 @@ footer a{color:var(--mut);text-decoration:none}footer a:hover{color:#fff}
       <details><summary>Onde ficam os meus dados?</summary><p>Somente no seu celular. Nenhum dado seu é enviado para servidores. Por isso o aplicativo tem backup: baixe um de vez em quando e guarde com você.</p></details>
       <details><summary>Preciso de internet?</summary><p>Só para instalar. Depois o aplicativo funciona sem conexão.</p></details>
       <details><summary>Funciona em iPhone e Android?</summary><p>Sim. É só abrir o link e adicionar à tela inicial, pelo Chrome (Android) ou pelo Safari (iPhone).</p></details>
-      <details><summary>Tem mensalidade?</summary><p>Os aplicativos são pagamento único. Existe um acompanhamento mensal opcional, que é um serviço à parte.</p></details>
+      <details><summary>Tem mensalidade?</summary><p>Os aplicativos são pagamento único. Existe o Raio-X Bumerân, um acompanhamento mensal opcional de R$ 29,90, que é um serviço à parte.</p></details>
     </div>
   </div>
 </section>

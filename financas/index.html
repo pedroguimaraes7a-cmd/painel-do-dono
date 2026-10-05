@@ -99,6 +99,24 @@ td.x b{color:var(--ink)}
 .tag{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--o1)}
 .card .p{font-size:30px;font-weight:900;margin:6px 0 14px}.card .p small{font-size:14px;color:var(--mut);font-weight:500}
 
+
+/* raio-x */
+.rx{position:relative;margin-top:34px;border-radius:28px;padding:1.5px;background:linear-gradient(135deg,var(--o1),var(--o2) 45%,#3b7cff)}
+.rx>div{border-radius:27px;background:linear-gradient(180deg,#0b1a36,#06122a);padding:34px 30px;display:grid;gap:26px;align-items:center}
+@media(min-width:860px){.rx>div{grid-template-columns:1.3fr .7fr;padding:44px}}
+.rx h3{font-size:clamp(26px,4vw,36px);margin:6px 0 10px}
+.rx .lead{color:var(--ink);font-size:18px;margin:0 0 16px}
+.rx ol{margin:0;padding:0;list-style:none;display:grid;gap:10px;counter-reset:r}
+.rx li{counter-increment:r;display:flex;gap:12px;color:var(--mut);font-size:15.5px}
+.rx li::before{content:counter(r);flex:none;width:24px;height:24px;border-radius:50%;background:rgba(255,113,0,.2);color:var(--o1);font-weight:900;font-size:13px;display:grid;place-items:center}
+.rx li b{color:var(--ink)}
+.rx .buy{text-align:center;background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:26px 20px}
+.rx .buy .p{font-size:44px;font-weight:900;line-height:1}.rx .buy .p small{font-size:15px;color:var(--mut);font-weight:500}
+.rx .buy .n{color:var(--mut);font-size:13px;margin:10px 0 18px}
+.addrx{display:block;margin:0 0 16px;font-size:13.5px;color:var(--mut);text-decoration:none;border:1px dashed rgba(255,113,0,.55);border-radius:14px;padding:10px 14px;text-align:center}
+.addrx b{color:var(--o1)}.addrx:hover{border-color:var(--o1);color:#fff}
+@media(min-width:860px){.stepsb.four{grid-template-columns:repeat(4,1fr)}}
+
 /* pagamento */
 .paybox{display:grid;gap:26px;align-items:center;background:linear-gradient(135deg,rgba(255,113,0,.14),rgba(24,82,190,.14));border:1px solid var(--line);border-radius:28px;padding:34px}
 @media(min-width:860px){.paybox{grid-template-columns:1.1fr .9fr;padding:44px}}
@@ -149,7 +167,7 @@ footer a{color:var(--mut);text-decoration:none}
         <a class="btn" href="#planos">Ver planos e preços</a>
         <a class="btn g" href="calculadora/">Calculadora grátis de lucro</a>
       </div>
-      <div class="trust"><span>Pagamento único</span><span>Pix ou cartão</span><span>Dados só no seu celular</span><span>Funciona sem internet</span></div>
+      <div class="trust"><span>Pagamento único</span><span>Pix ou cartão</span><span>Dados só no seu celular</span><span>Funciona sem internet</span><span>Raio-X mensal opcional</span></div>
     </div>
     <div><div class="ph"><img src="../assets/app-painel.jpg" alt="Tela do Meu Painel do Dono"></div></div>
   </div>
@@ -162,13 +180,13 @@ footer a{color:var(--mut);text-decoration:none}
 <section class="plans" id="planos">
   <div class="w">
     <div class="head center rv"><span class="eyebrow">Escolha o seu plano</span><h2>Dois planos. <span class="grad">Uma só vez</span>.</h2>
-      <p class="sub">Pague uma vez e use para sempre, sem mensalidade. Os dois funcionam de forma independente.</p></div>
+      <p class="sub">Pague uma vez e use para sempre, sem mensalidade. Quer um acompanhamento todo mês? O Raio-X é opcional e vem logo abaixo.</p></div>
     <div class="pl">
       <div class="plan rv">
         <div class="nm">Básico</div>
         <div class="tt">Para sair do caderno e começar a enxergar o resultado do mês.</div>
         <div class="pr"><b><sup>R$</sup>47</b><span>pagamento único</span></div>
-        <div class="pay">Pix ou cartão · acesso imediato</div>
+        <div class="pay">Pix ou cartão · ativação pelo WhatsApp</div>
         <ul class="fl">
           <li><span>Lançar entradas e saídas em segundos</span></li>
           <li><span>Caixa e lucro do mês, lado a lado</span></li>
@@ -176,6 +194,7 @@ footer a{color:var(--mut);text-decoration:none}
           <li><span>Histórico, gráficos e comparação de meses</span></li>
           <li><span>Backup e exportação para Excel</span></li>
         </ul>
+        <a class="addrx" href="#raiox">+ Adicione o <b>Raio-X mensal</b> por R$ 29,90/mês</a>
         <button class="btn full" data-buy="basico">Quero o Básico</button>
       </div>
       <div class="plan star rv d1">
@@ -183,7 +202,7 @@ footer a{color:var(--mut);text-decoration:none}
         <div class="nm">Avançado</div>
         <div class="tt">Para quem quer saber quanto cobrar, quanto vender e quem está devendo.</div>
         <div class="pr"><b><sup>R$</sup>97</b><span>pagamento único</span></div>
-        <div class="pay">Pix ou cartão · acesso imediato</div>
+        <div class="pay">Pix ou cartão · ativação pelo WhatsApp</div>
         <ul class="fl">
           <li class="plus"><span>Tudo do plano Básico, mais:</span></li>
           <li><span><b>Preços:</b> descubra quanto cobrar para ter lucro</span></li>
@@ -192,10 +211,29 @@ footer a{color:var(--mut);text-decoration:none}
           <li><span><b>Ponto de equilíbrio</b> calculado para você</span></li>
           <li><span><b>Relatório mensal</b> para imprimir ou salvar em PDF</span></li>
         </ul>
+        <a class="addrx" href="#raiox">+ Adicione o <b>Raio-X mensal</b> por R$ 29,90/mês</a>
         <button class="btn full" data-buy="avancado">Quero o Avançado</button>
       </div>
     </div>
     <p class="small"><b>Garantia de 7 dias:</b> se você comprar pela internet e desistir em até 7 dias, devolvemos o valor. Com a devolução, o acesso é desativado. Depois da compra você recebe um link pessoal de ativação.</p>
+    <div class="rx rv" id="raiox"><div>
+      <div>
+        <span class="eyebrow">Raio-X Bumerân · assinatura opcional</span>
+        <h3>O aplicativo mostra o número.<br><span class="grad">O Raio-X mostra o que olhar nele.</span></h3>
+        <p class="lead">Quem só registra continua no escuro. Quem revisa o mês todo mês enxerga o problema antes de ele virar prejuízo.</p>
+        <ol>
+          <li><span>Uma vez por mês, você envia o <b>backup</b> do seu aplicativo para a gente.</span></li>
+          <li><span>Recebe um <b>resumo simples</b>, com os <b>3 pontos que merecem atenção</b> no seu negócio.</span></li>
+          <li><span>Funciona com o <b>Básico, o Avançado ou o Premium</b>. Cancele quando quiser.</span></li>
+        </ol>
+      </div>
+      <div class="buy">
+        <div class="tag">Assinatura mensal</div>
+        <div class="p">R$ 29,90 <small>/ mês</small></div>
+        <div class="n">Sem fidelidade · cancele a qualquer momento</div>
+        <button class="btn full" data-buy="raiox">Quero o Raio-X</button>
+      </div>
+    </div></div>
   </div>
 </section>
 
@@ -235,18 +273,12 @@ footer a{color:var(--mut);text-decoration:none}
 <section>
   <div class="w">
     <div class="head rv"><span class="eyebrow">Quer ir além?</span><h2>Com ajuda <span class="grad">de gente de verdade</span>.</h2></div>
-    <div class="ex">
+    <div class="ex" style="grid-template-columns:1fr;max-width:640px;margin-inline:auto">
       <div class="card rv">
         <div class="tag">Premium</div><h3>Avançado + implantação</h3>
         <div class="p">R$ 197 <small>uma vez</small></div>
         <p>O aplicativo pronto para o seu negócio: configuramos as categorias, os produtos e os preços com você, e fazemos o primeiro diagnóstico.</p>
         <button class="btn g" data-buy="premium">Quero o Premium</button>
-      </div>
-      <div class="card rv d1">
-        <div class="tag">Opcional</div><h3>Raio-X Bumerân</h3>
-        <div class="p">R$ 29,90 <small>por mês</small></div>
-        <p>Todo mês você envia o relatório do seu aplicativo e recebe um resumo simples, com os 3 pontos que merecem atenção. Cancele quando quiser.</p>
-        <button class="btn g" data-buy="raiox">Quero o Raio-X</button>
       </div>
     </div>
     <p class="small">O Raio-X é uma análise gerencial dos dados que você mesmo lança. Não substitui contador nem é orientação fiscal.</p>
@@ -259,7 +291,7 @@ footer a{color:var(--mut);text-decoration:none}
       <div>
         <span class="eyebrow">Pagamento</span>
         <h2 style="font-size:clamp(26px,4vw,38px)">Pague do jeito que for <span class="grad">mais fácil</span>.</h2>
-        <p class="sub" style="font-size:16px">Checkout seguro, pagamento único e acesso por e-mail logo depois da confirmação.</p>
+        <p class="sub" style="font-size:16px">Checkout seguro e pagamento único. Depois da confirmação, você recebe o guia por e-mail e o link de ativação pelo WhatsApp.</p>
       </div>
       <div class="pm">
         <div><svg viewBox="0 0 24 24"><path d="M12 3l4 4-4 4-4-4z"/><path d="M12 13l4 4-4 4-4-4z" /><path d="M3 12l4-4M21 12l-4-4M3 12l4 4M21 12l-4 4"/></svg>Pix</div>
@@ -272,10 +304,11 @@ footer a{color:var(--mut);text-decoration:none}
 <section style="padding-top:20px">
   <div class="w">
     <div class="head center rv"><span class="eyebrow">Como funciona</span><h2>Do pagamento ao <span class="grad">primeiro lançamento</span>.</h2></div>
-    <div class="stepsb">
+    <div class="stepsb four">
       <div class="sb rv"><h3>Escolha e pague</h3><p>Selecione o plano e pague por Pix ou cartão.</p></div>
-      <div class="sb rv d1"><h3>Receba o acesso</h3><p>Você recebe o link e o QR Code para instalar, por e-mail.</p></div>
+      <div class="sb rv d1"><h3>Receba o acesso</h3><p>Você recebe o guia por e-mail e o seu link pessoal de ativação pelo WhatsApp.</p></div>
       <div class="sb rv d2"><h3>Instale e use</h3><p>Adicione à tela inicial do celular e faça o primeiro lançamento em minutos.</p></div>
+      <div class="sb rv d2"><h3>Revise todo mês</h3><p>Com o <b>Raio-X</b> (opcional), você manda o backup e recebe os 3 pontos de atenção.</p></div>
     </div>
   </div>
 </section>
@@ -285,10 +318,11 @@ footer a{color:var(--mut);text-decoration:none}
     <div class="head rv"><span class="eyebrow">Dúvidas</span><h2>Perguntas <span class="grad">frequentes</span></h2></div>
     <div class="rv">
       <details><summary>É mensalidade?</summary><p>Não. Os planos Básico e Avançado são pagamento único. O Raio-X mensal é um serviço opcional à parte.</p></details>
+      <details><summary>O que é o Raio-X e vale a pena?</summary><p>É uma assinatura opcional de R$ 29,90 por mês. Todo mês você envia o backup do seu aplicativo e recebe um resumo simples, com os 3 pontos que merecem atenção no seu negócio. Vale para quem quer registrar e também ter alguém olhando os números com você. É uma análise gerencial dos dados que você lança, não substitui contador e não promete resultado. Cancele quando quiser.</p></details>
       <details><summary>Onde ficam meus dados?</summary><p>Somente no seu celular. Nenhum dado é enviado para servidores, e ninguém da Bumerân vê os seus números. Por isso, baixe o backup de vez em quando: se trocar de aparelho ou limpar os dados do navegador, sem backup eles se perdem.</p></details>
       <details><summary>Preciso de internet?</summary><p>Para instalar e ativar. Depois funciona sem conexão, e o aplicativo confere a sua licença sozinho quando o celular estiver online.</p></details>
       <details><summary>Como funciona a garantia de 7 dias?</summary><p>Comprou pela internet e desistiu em até 7 dias? Devolvemos o valor pago. Com a devolução, a licença é desativada e o aplicativo deixa de abrir neste e em qualquer aparelho. Seus dados são seus: antes de sair, o aplicativo deixa você baixar um backup.</p></details>
-      <details><summary>Como ativo depois de comprar?</summary><p>Você recebe um link pessoal. Abra-o uma vez no celular e o aplicativo está ativado. Depois, instale na tela inicial. Não compartilhe o seu link: ele é individual e pode ser desativado.</p></details>
+      <details><summary>Como ativo depois de comprar?</summary><p>Você recebe um link pessoal pelo WhatsApp. Abra-o uma vez no celular e o aplicativo está ativado. Depois, instale na tela inicial. Não compartilhe o seu link: ele é individual e pode ser desativado.</p></details>
       <details><summary>Funciona em iPhone e Android?</summary><p>Sim. No Android, abra o link no Chrome e toque em "Instalar" ou "Adicionar à tela inicial". No iPhone, abra no Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".</p></details>
       <details><summary>Posso passar do Básico para o Avançado?</summary><p>Sim. Baixe o backup no Básico e restaure no Avançado: os seus lançamentos vão junto.</p></details>
       <details><summary>Vale para mais de um celular?</summary><p>A licença é individual, para o dono do negócio. Cada aparelho guarda os próprios dados.</p></details>
