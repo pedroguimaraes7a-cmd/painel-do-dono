@@ -352,8 +352,7 @@ var NOMES = { basico: "Básico", avancado: "Avançado", raiox: "Raio-X mensal" }
     b.addEventListener("click", function () {
       var p = b.getAttribute("data-buy");
       if (CHECKOUT[p]) { location.href = CHECKOUT[p]; return; }
-      if (WHATSAPP) { location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Quero o Meu Painel do Dono, plano " + NOMES[p] + "."); return; }
-      aviso("Compra disponível em breve. Enquanto isso, experimente a calculadora grátis de lucro.");
+      aviso("Compra liberada em breve. Dúvidas? Chame no WhatsApp pelo botão verde.");
     });
   });
   var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { threshold: .15 });

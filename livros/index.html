@@ -103,7 +103,9 @@ document.querySelectorAll("[data-buy]").forEach(function (b) {
   b.addEventListener("click", function () {
     var p = b.getAttribute("data-buy");
     if (CHECKOUT[p]) { location.href = CHECKOUT[p]; return; }
-    location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Vim pelo site e quero o livro: " + NOMES[p] + ".");
+    var t = document.createElement("div"); t.textContent = "Compra liberada em breve. Dúvidas? Chame no WhatsApp pelo botão verde.";
+    t.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#0b1530;color:#fff;padding:12px 18px;border-radius:12px;font:600 14px system-ui,sans-serif;z-index:70;max-width:90vw;text-align:center";
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 4200);
   });
 });
 </script>
