@@ -430,6 +430,7 @@ if (typeof document !== "undefined") {
   function carregar() {
     try {
       var t = localStorage.getItem(CHAVE);
+      if (!t && AV) { var t2 = localStorage.getItem("painel_dono_basico_v1"); if (t2) { t = t2; try { localStorage.setItem(CHAVE, t2); } catch (e2) {} } } /* quem sobe do Básico para o Avançado leva os dados junto */
       if (t) {
         var o = JSON.parse(t);
         if (o && Array.isArray(o.lanc) && o.config) {
@@ -1237,7 +1238,6 @@ if (typeof document !== "undefined") {
     ]));
     kids.push(cardLembrete());
     kids.push(cardSom());
-    if (!AV) kids.push(el("div", { class: "card" }, [el("h2", { text: "Quanto posso tirar para mim?" }), el("p", { class: "sub", text: "No Avançado, o aplicativo mostra quanto o seu negócio precisa vender para pagar o seu custo de vida, divide a sobra do mês entre você, a reserva e o crescimento e avisa quando você tira demais." }), el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", href: "../", text: "Conhecer o Avançado" })]));
     var minhas = el("div", { class: "card" }, [el("h2", { text: "Minhas categorias" })]);
     var tem = false;
     [["e", "Entradas"], ["s", "Saídas"]].forEach(function (par) {
