@@ -44,6 +44,11 @@
   .mini { background:var(--bg); border-radius:12px; padding:10px 12px; }
   .mini .t { font-size:13px; color:var(--muted); } .mini .v { font-size:16px; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
   .hint { font-size:13.5px; color:var(--muted); margin-top:8px; }
+  .lrow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+  .lrow label { margin:0; flex:1; }
+  .qbtn { flex:none; width:36px; height:36px; border-radius:50%; border:2px solid var(--muted); background:none; color:var(--muted); font-size:18px; font-weight:700; cursor:pointer; line-height:1; padding:0; }
+  .qbtn[aria-expanded="true"] { background:var(--muted); color:#fff; }
+  .ajuda { font-size:14.5px; line-height:1.45; background:rgba(0,0,0,.05); border-radius:10px; padding:10px 12px; margin:4px 0 6px; }
   .tip { background:var(--warnbg); color:var(--warn); border-radius:12px; padding:10px 12px; font-size:13px; margin-top:8px; border-left:4px solid var(--warn); }
   label { display:block; font-size:13px; color:var(--muted); margin:14px 0 5px; font-weight:600; }
   input[type=text], input[type=date], select { width:100%; padding:13px; font-size:16px; border:1px solid var(--line); border-radius:12px; background:var(--bg); color:var(--text); }
@@ -960,14 +965,37 @@ if (typeof document !== "undefined") {
     var fC = el("input", { id: "p-c", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.c), autocomplete: "off" });
     var fO = el("input", { id: "p-o", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.o), autocomplete: "off" });
     var fR = el("input", { id: "p-r", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.r), autocomplete: "off" });
-    var fUn = el("input", { id: "p-un", type: "text", inputmode: "numeric", placeholder: "Ex.: 600", autocomplete: "off" });
+    var fUn = el("input", { id: "p-un", type: "text", inputmode: "numeric", placeholder: "Ex.: 200", autocomplete: "off" });
+    var fFx = el("input", { id: "p-fx", type: "text", inputmode: "decimal", placeholder: "Ex.: 3.000,00", autocomplete: "off" });
     var fT = el("input", { id: "p-t", type: "text", inputmode: "decimal", placeholder: "Ex.: 15", value: ed.t ? String(ed.t).replace(".", ",") : "", autocomplete: "off" });
     var fM = el("input", { id: "p-m", type: "text", inputmode: "decimal", placeholder: "Ex.: 20", value: String(ed.m).replace(".", ","), autocomplete: "off" });
     var fP = el("input", { id: "p-p", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.p), autocomplete: "off" });
     var rateioMsg = el("div", { class: "hint" });
     var res = el("div", { id: "p-res" });
     var ultimo = null;
+    function rot(forId, texto, ajudaTxt) {
+      var box = el("div", { class: "ajuda", text: ajudaTxt }); box.hidden = true;
+      var q = el("button", { type: "button", class: "qbtn", text: "?", "aria-label": "Explicar: " + texto, "aria-expanded": "false" });
+      q.addEventListener("click", function () { box.hidden = !box.hidden; q.setAttribute("aria-expanded", box.hidden ? "false" : "true"); });
+      return el("div", {}, [el("div", { class: "lrow" }, [el("label", { for: forId, text: texto }), q]), box]);
+    }
+    function recalc() {
+      var tocou = fFx.value.trim() !== "" || fUn.value.trim() !== "";
+      if (!tocou) return true;
+      var fx = moneyOuZero(fFx.value), un = parseInt(String(fUn.value).replace(/\D/g, ""), 10);
+      if (fx === null) { fR.value = ""; rateioMsg.textContent = "Confira o valor dos gastos fixos."; return false; }
+      if (fx > 0 && un > 0) {
+        var por = rateioFixo(fx, un); fR.value = fmtIn(por);
+        rateioMsg.textContent = "Gastos fixos de " + money(fx) + " divididos por " + un + " unidades: cada unidade carrega " + money(por) + ". Esse valor já entra na conta do preço.";
+        return true;
+      }
+      fR.value = "";
+      rateioMsg.textContent = "Preencha os dois campos (gastos do mês e quantidade vendida) para dividir os gastos fixos.";
+      return fx === 0 && !(un > 0);
+    }
+    fFx.addEventListener("input", recalc); fUn.addEventListener("input", recalc);
     function ler() {
+      if (!recalc()) return null;
       var o = { c: moneyOuZero(fC.value), o: moneyOuZero(fO.value), r: moneyOuZero(fR.value), t: parsePct(fT.value), m: parsePct(fM.value), p: moneyOuZero(fP.value) };
       if (o.c === null || o.o === null || o.r === null || o.p === null || o.t === null || o.m === null) return null;
       return o;
@@ -977,11 +1005,16 @@ if (typeof document !== "undefined") {
       if (r.erro && r.sugerido === undefined) { res.appendChild(el("div", { class: "tip", text: r.erro })); return; }
       var card = el("div", { class: "card" }, [el("h2", { text: "Resultado" })]);
       card.appendChild(el("div", { class: "grid2" }, [
-        mini("Preço mínimo (lucro zero)", money(r.minimo)),
-        mini("Preço para ter o lucro que quer", r.sugerido === null ? "-" : money(r.arredondado), "pos")
+        mini("Preço mínimo (abaixo disso você perde)", money(r.minimo)),
+        mini("Preço para sobrar o lucro que você quer", r.sugerido === null ? "-" : money(r.arredondado), "pos")
       ]));
       if (r.erro) card.appendChild(el("div", { class: "tip", text: r.erro }));
-      card.appendChild(el("div", { class: "hint", text: "Para cobrir os custos (" + money(r.base) + " por unidade) e as taxas, abaixo do preço mínimo você perde dinheiro em cada venda." }));
+      card.appendChild(el("div", { class: "hint", text: "O custo de cada unidade é " + money(r.base) + ". Cobrando menos de " + money(r.minimo) + ", você perde dinheiro em cada venda." }));
+      if (r.sugerido !== null && r.sugerido !== undefined) {
+        var pv = r.arredondado, tx = Math.round(pv * (o.t || 0) / 100), lu = pv - tx - r.base;
+        card.appendChild(el("div", { class: "tip", style: "background:var(--bg2,#f6efe6);color:inherit", text: "Cobrando " + money(pv) + ": " + money(r.base) + " cobrem os custos, " + money(tx) + " vão para taxas e impostos, e " + money(lu) + " sobram de lucro (" + Math.round(lu / pv * 100) + "% do preço)." }));
+        if (!(o.r > 0)) card.appendChild(el("div", { class: "hint", text: "Atenção: você não incluiu os gastos fixos (aluguel, luz, salário). Se incluir, o preço sobe para cobrir também esses gastos." }));
+      }
       if (o.p > 0) {
         var txt, cls;
         if (r.situacao === "prejuizo") { txt = "Hoje, cobrando " + money(o.p) + ", você perde " + money(-r.lucroAtual) + " em cada unidade vendida."; cls = "tip"; }
@@ -998,23 +1031,19 @@ if (typeof document !== "undefined") {
       res.appendChild(card);
     }
     kids.push(el("div", { class: "card" }, [
-      el("label", { for: "p-nome", text: "Nome do produto ou serviço" }), fNome,
-      el("label", { for: "p-c", text: "Quanto custa fazer 1 unidade? (" + exPreco()[1].toLowerCase() + ")" }), fC,
-      el("label", { for: "p-o", text: "Outros custos de cada unidade (" + exPreco()[2].toLowerCase() + "...)" }), fO,
-      el("label", { for: "p-r", text: "Parte dos custos fixos em cada unidade" }), fR,
-      el("div", { class: "hint", text: "Aluguel, luz, salários e outros gastos que existem mesmo sem vender, divididos pelas unidades que você vende no mês." }),
-      el("div", { class: "grid2", style: "margin-top:8px" }, [fUn, el("button", { class: "btn sec", style: "margin-top:0", text: "Calcular pelo meu caixa", onclick: function () {
-        var un = parseInt(String(fUn.value).replace(/\D/g, ""), 10);
-        if (!(un > 0)) { aviso("Diga quantas unidades você vende por mês"); return; }
+      rot("p-nome", "Nome do produto ou serviço", "Só para você reconhecer depois, na sua lista. Exemplos: Pizza grande, Corte de cabelo, Livro."), fNome,
+      rot("p-c", "Quanto custa fazer 1 unidade? (" + exPreco()[1].toLowerCase() + ")", "Some só o que você gasta para fazer UMA unidade: ingredientes, material, peças. Exemplo: se uma caixa com 10 custa R$ 50, cada unidade custa R$ 5,00."), fC,
+      rot("p-o", "Outros custos de cada unidade (" + exPreco()[2].toLowerCase() + "...)", "Gastos extras de cada unidade vendida: embalagem, gás, entrega, frete. Não coloque aluguel nem salário aqui: eles vão no campo de baixo."), fO,
+      rot("p-fx", "Gastos fixos do mês, no total (opcional)", "São os gastos que você paga todo mês, mesmo sem vender nada: aluguel, luz, internet, salário. Digite o total do mês (exemplo: 2.000,00). O painel divide pela quantidade vendida e inclui no preço. Se não souber, deixe em branco, mas aí o preço não cobre esses gastos."), fFx,
+      rot("p-un", "Quantas unidades você vende por mês?", "Quantas pizzas, cortes, peças ou serviços você vende em um mês normal. Se não souber, coloque um número baixo e ajuste depois. Quanto menos você vende, mais cada unidade precisa pagar dos gastos fixos."), fUn,
+      el("button", { class: "btn sec", style: "margin-top:8px", text: "Usar os gastos fixos que já lancei no painel", onclick: function () {
         var fx = fixosBase(S.dados.lanc, hoje().slice(0, 7));
-        if (fx <= 0) { aviso("Ainda não há custos fixos lançados"); return; }
-        fR.value = fmtIn(rateioFixo(fx, un));
-        rateioMsg.textContent = "Custos fixos de " + money(fx) + " divididos por " + un + " unidades.";
-      } })]), rateioMsg,
-      el("label", { for: "p-t", text: "Taxas e impostos sobre a venda (%)" }), fT,
-      el("div", { class: "hint", text: "Some o que é descontado do preço: taxa do aplicativo, da maquininha, impostos." }),
-      el("label", { for: "p-m", text: "Lucro que você quer em cada venda (%)" }), fM,
-      el("label", { for: "p-p", text: "Preço que você cobra hoje (opcional)" }), fP,
+        if (fx <= 0) { aviso("Ainda não há gastos fixos lançados neste mês"); return; }
+        fFx.value = fmtIn(fx); recalc();
+      } }), rateioMsg,
+      rot("p-t", "Taxas e impostos sobre a venda (%)", "Some tudo o que é descontado do valor da venda: taxa da maquininha, taxa do aplicativo, imposto. Exemplo: maquininha 3% + imposto 5% = digite 8. Se não tem nenhuma, deixe em branco."), fT,
+      rot("p-m", "Lucro que você quer em cada venda (%)", "Quanto você quer que sobre limpo de cada venda. Exemplo: 20 quer dizer que, de cada R$ 100 que o cliente paga, R$ 20 sobram para você, já descontados os custos e as taxas. Não é o quanto você soma em cima do custo."), fM,
+      rot("p-p", "Preço que você cobra hoje (opcional)", "Se você já vende esse produto, digite o preço atual. O painel mostra se você está ganhando ou perdendo dinheiro com ele. Se não souber, deixe em branco."), fP,
       el("button", { class: "btn", text: "Calcular preço", onclick: function () {
         var o = ler();
         if (!o) { aviso("Confira os números digitados"); return; }
