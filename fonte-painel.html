@@ -1216,7 +1216,7 @@ if (typeof document !== "undefined") {
     var a = el("a", { href: u, download: nome }); document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(u); }, 2000);
   }
-  function csvCampo(t) { t = String(t); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }
+  function csvCampo(t) { t = String(t); if (/^[=+\-@]/.test(t)) t = "'" + t; return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }
   function demo() {
     var n = nicho(), base = hoje().slice(0, 7), seed = 7;
     function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
@@ -1298,7 +1298,7 @@ if (typeof document !== "undefined") {
       el("button", { class: "btn sec", text: "Exportar para Excel (CSV)", onclick: function () {
         var linhas = ["Data;Tipo;Categoria;Valor;Observação"];
         d.lanc.slice().sort(function (a, b) { return a.d < b.d ? -1 : 1; }).forEach(function (x) {
-          linhas.push([x.d, x.t === "e" ? "Entrada" : "Saída", csvCampo(x.c), (x.v / 100).toFixed(2).replace(".", ","), csvCampo(x.o)].join(";"));
+          linhas.push([x.d.slice(8, 10) + "/" + x.d.slice(5, 7) + "/" + x.d.slice(0, 4), x.t === "e" ? "Entrada" : "Saída", csvCampo(x.c), (x.v / 100).toFixed(2).replace(".", ","), csvCampo(x.o)].join(";"));
         });
         baixar("lancamentos-" + hoje() + ".csv", "﻿" + linhas.join("\n"), "text/csv;charset=utf-8");
       } })
