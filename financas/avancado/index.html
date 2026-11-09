@@ -47,8 +47,9 @@
   .lrow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
   .lrow label { margin:0; flex:1; }
   .qbtn { flex:none; width:36px; height:36px; border-radius:50%; border:2px solid var(--muted); background:none; color:var(--muted); font-size:18px; font-weight:700; cursor:pointer; line-height:1; padding:0; }
-  .qbtn[aria-expanded="true"] { background:var(--muted); color:#fff; }
-  .ajuda { font-size:14.5px; line-height:1.45; background:rgba(0,0,0,.05); border-radius:10px; padding:10px 12px; margin:4px 0 6px; }
+  .qbtn[aria-expanded="true"] { background:var(--muted); color:var(--bg); }
+  .ajuda { font-size:14.5px; line-height:1.45; background:rgba(127,127,127,.16); color:var(--text); border-radius:10px; padding:10px 12px; margin:4px 0 6px; }
+  .resumo { font-size:14.5px; line-height:1.45; background:rgba(127,127,127,.16); color:var(--text); border-left:4px solid var(--acc); border-radius:12px; padding:10px 12px; margin-top:8px; }
   .tip { background:var(--warnbg); color:var(--warn); border-radius:12px; padding:10px 12px; font-size:13px; margin-top:8px; border-left:4px solid var(--warn); }
   label { display:block; font-size:13px; color:var(--muted); margin:14px 0 5px; font-weight:600; }
   input[type=text], input[type=date], select { width:100%; padding:13px; font-size:16px; border:1px solid var(--line); border-radius:12px; background:var(--bg); color:var(--text); }
@@ -469,6 +470,16 @@ if (typeof document !== "undefined") {
   var S = { dados: carregar(), view: "inicio", ym: hoje().slice(0, 7), tipo: "e", ano: hoje().slice(0, 4), confirma: null, toast: "",
             novaCat: false, contaTipo: "p", pagando: null, precEdit: null, lic: { estado: "checando" } };
   var app = document.getElementById("app");
+  /* Se o painel ficou aberto em segundo plano e o dia (ou o mês) virou, atualiza ao voltar. */
+  var diaVisto = hoje();
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) return;
+    var h = hoje();
+    if (h === diaVisto) return;
+    if (S.ym === diaVisto.slice(0, 7)) S.ym = h.slice(0, 7);
+    if (S.ano === diaVisto.slice(0, 4)) S.ano = h.slice(0, 4);
+    diaVisto = h; render();
+  });
 
   function el(tag, props, kids) {
     var e = document.createElement(tag);
@@ -1012,7 +1023,7 @@ if (typeof document !== "undefined") {
       card.appendChild(el("div", { class: "hint", text: "O custo de cada unidade é " + money(r.base) + ". Cobrando menos de " + money(r.minimo) + ", você perde dinheiro em cada venda." }));
       if (r.sugerido !== null && r.sugerido !== undefined) {
         var pv = r.arredondado, tx = Math.round(pv * (o.t || 0) / 100), lu = pv - tx - r.base;
-        card.appendChild(el("div", { class: "tip", style: "background:var(--bg2,#f6efe6);color:inherit", text: "Cobrando " + money(pv) + ": " + money(r.base) + " cobrem os custos, " + money(tx) + " vão para taxas e impostos, e " + money(lu) + " sobram de lucro (" + Math.round(lu / pv * 100) + "% do preço)." }));
+        card.appendChild(el("div", { class: "resumo", text: "Cobrando " + money(pv) + ": " + money(r.base) + " cobrem os custos, " + money(tx) + " vão para taxas e impostos, e " + money(lu) + " sobram de lucro (" + Math.round(lu / pv * 100) + "% do preço)." }));
         if (!(o.r > 0)) card.appendChild(el("div", { class: "hint", text: "Atenção: você não incluiu os gastos fixos (aluguel, luz, salário). Se incluir, o preço sobe para cobrir também esses gastos." }));
       }
       if (o.p > 0) {
