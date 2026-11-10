@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Meu Painel do Dono – saiba quanto sobra no seu negócio</title>
 <meta name="description" content="Aplicativo de controle financeiro para pequeno comércio: caixa, lucro, preços, contas a pagar e a receber. Pagamento único, sem mensalidade. Seus dados ficam só no seu celular.">
+<meta property="og:title" content="Meu Painel do Dono – saiba quanto sobra no seu negócio">
+<meta property="og:description" content="Caixa, lucro, preços e contas do seu comércio no celular. Pagamento único, garantia de 7 dias.">
+<meta property="og:image" content="https://somosbumeran.com.br/assets/icon-512.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://somosbumeran.com.br/financas/">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#03152f">
 <link rel="icon" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
@@ -82,7 +88,7 @@ section{padding:84px 0;position:relative}
 
 /* tabela */
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--glass)}
-table{width:100%;border-collapse:collapse;min-width:520px}
+table{width:100%;border-collapse:collapse}@media(max-width:560px){th,td{padding:12px 8px!important;font-size:14px!important}thead th{font-size:11px!important;letter-spacing:.04em!important}td small{display:block}}
 th,td{padding:15px 18px;text-align:center;border-bottom:1px solid var(--line);font-size:15px}
 th:first-child,td:first-child{text-align:left}
 thead th{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
@@ -257,6 +263,7 @@ footer a{color:var(--mut);text-decoration:none}
         <tr><td><b>Meta do mês</b></td><td class="n">—</td><td class="y hl">✓</td></tr>
         <tr><td><b>Ponto de equilíbrio</b></td><td class="n">—</td><td class="y hl">✓</td></tr>
         <tr><td><b>Relatório mensal em PDF</b></td><td class="n">—</td><td class="y hl">✓</td></tr>
+        <tr><td><b>Salário do Dono:</b> quanto você pode tirar</td><td class="n">—</td><td class="y hl">✓</td></tr>
         <tr><td>Preço</td><td><b>R$ 47</b></td><td class="hl"><b>R$ 97</b> <small>(inauguração; depois R$ 127)</small></td></tr>
       </tbody></table></div>
   </div>
@@ -316,6 +323,7 @@ footer a{color:var(--mut);text-decoration:none}
       <details><summary>Como ativo depois de comprar?</summary><p>Você recebe um link pessoal de ativação (se não chegar, é só chamar no WhatsApp). Abra-o uma vez no celular e o aplicativo está ativado. Depois, instale na tela inicial. Não compartilhe o seu link: ele é individual e pode ser desativado.</p></details>
       <details><summary>Funciona em iPhone e Android?</summary><p>Sim. No Android, abra o link no Chrome e toque em "Instalar" ou "Adicionar à tela inicial". No iPhone, abra no Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".</p></details>
       <details><summary>Posso passar do Básico para o Avançado?</summary><p>Sim. Baixe o backup no Básico e restaure no Avançado: os seus lançamentos vão junto.</p></details>
+      <details><summary>E se eu trocar de celular?</summary><p>Antes de trocar, baixe o backup na aba Mais. No celular novo, abra o seu link de ativação (ou cole o código, que fica em Mais, Minha licença) e toque em Restaurar backup. Tudo volta como estava.</p></details>
       <details><summary>Vale para mais de um celular?</summary><p>A licença é individual, para o dono do negócio. Cada aparelho guarda os próprios dados.</p></details>
       <details><summary>Substitui o contador?</summary><p>Não. O Meu Painel do Dono organiza e mostra indicadores a partir do que você lança. Não é orientação contábil, fiscal nem de investimento.</p></details>
     </div>
@@ -331,7 +339,7 @@ footer a{color:var(--mut);text-decoration:none}
 </section>
 
 <footer><div class="w">
-  <p style="margin:0 0 8px"><a href="../">Bumerân</a> · Meu Painel do Dono, uma solução Bumerân Finanças · <a href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">@bumeran_edu</a></p>
+  <p style="margin:0 0 8px"><a href="../">Bumerân</a> · Meu Painel do Dono, uma solução Bumerân Finanças · <a href="https://instagram.com/bumeran_edu" target="_blank" rel="noopener">Instagram</a> · <a href="https://tiktok.com/@bumeranedu" target="_blank" rel="noopener">TikTok</a> · <a href="../livros/">Livros</a></p>
   <p style="margin:0;max-width:760px">A Bumerân não é banco, instituição financeira, escritório contábil nem auditoria. O aplicativo organiza os dados que você mesmo lança e não substitui um contador.</p>
 </div></footer>
 
@@ -352,8 +360,8 @@ var NOMES = { basico: "Básico", avancado: "Avançado", raiox: "Raio-X mensal" }
   if (WHATSAPP && w2) { w2.hidden = false; w2.target = "_blank"; w2.rel = "noopener"; w2.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Oi! Vim pelo site e tenho uma dúvida sobre o Meu Painel do Dono."); }
   document.querySelectorAll("[data-buy]").forEach(function (b) {
     b.addEventListener("click", function () {
-      var p = b.getAttribute("data-buy");
-      if (CHECKOUT[p]) { location.href = CHECKOUT[p]; return; }
+var p = b.getAttribute("data-buy");
+      if (CHECKOUT[p]) { var u = CHECKOUT[p], m = location.search.match(/[?&](?:src|utm_source)=([A-Za-z0-9_\-]{1,40})/); location.href = u + "&src=" + (m ? m[1] : "site"); return; }
       aviso("Compra liberada em breve. Dúvidas? Chame no WhatsApp pelo botão verde.");
     });
   });

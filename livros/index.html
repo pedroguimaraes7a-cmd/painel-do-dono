@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Livros Bumerân Finanças – preço, salário e fiado do pequeno comércio</title>
 <meta name="description" content="Três guias práticos para quem tem comércio de bairro: como formar o preço certo, como pagar o seu salário sem quebrar o caixa e como vender fiado sem susto. PDF, R$ 19,90 cada.">
+<meta property="og:title" content="Livros Bumerân Finanças">
+<meta property="og:description" content="Preço, salário e fiado do pequeno comércio, em três guias simples. R$ 19,90 cada.">
+<meta property="og:image" content="https://somosbumeran.com.br/assets/icon-512.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://somosbumeran.com.br/livros/">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#03152f">
 <link rel="icon" href="../favicon.png">
 <style>
@@ -101,8 +107,8 @@ var CHECKOUT = { preco: "https://pay.hotmart.com/S107893212N?off=d63bn9od", sala
 var NOMES = { preco: "Preço Certo", salario: "Salário do Dono", fiado: "Fiado, sem susto", pacote: "pacote com os três livros" };
 document.querySelectorAll("[data-buy]").forEach(function (b) {
   b.addEventListener("click", function () {
-    var p = b.getAttribute("data-buy");
-    if (CHECKOUT[p]) { location.href = CHECKOUT[p]; return; }
+var p = b.getAttribute("data-buy");
+    if (CHECKOUT[p]) { var u = CHECKOUT[p], m = location.search.match(/[?&](?:src|utm_source)=([A-Za-z0-9_\-]{1,40})/); location.href = u + "&src=" + (m ? m[1] : "site"); return; }
     var t = document.createElement("div"); t.textContent = "Compra liberada em breve. Dúvidas? Chame no WhatsApp pelo botão verde.";
     t.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#0b1530;color:#fff;padding:12px 18px;border-radius:12px;font:600 14px system-ui,sans-serif;z-index:70;max-width:90vw;text-align:center";
     document.body.appendChild(t); setTimeout(function () { t.remove(); }, 4200);

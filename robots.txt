@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /fonte-painel.html
+Sitemap: https://somosbumeran.com.br/sitemap.xml
