@@ -465,6 +465,7 @@ function validarBackup(obj) {
   var conf = { negocio: String(cfg.negocio || "").slice(0, 60), nicho: NICHOS[cfg.nicho] ? cfg.nicho : "geral",
                      tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta, lembrete: lembrete, pro: pro, som: cfg.som !== false };
   if (precoBase) conf.precoBase = precoBase;
+  if (typeof cfg.revOk === "number" && isFinite(cfg.revOk) && cfg.revOk > 0 && cfg.revOk < 100) conf.revOk = cfg.revOk;
   return { lanc: out, contas: contas, produtos: produtos, config: conf };
 }
 
@@ -1180,7 +1181,7 @@ if (typeof document !== "undefined") {
       var pb = S.dados.config.precoBase;
       if (mx - mn >= 1 && pb) { alvo = { fx: pb.fx, fat: pb.fat, f: pesoFixos(pb.fx, pb.fat) }; porque = "Seus produtos estão com pesos diferentes de gastos fixos (de " + String(mn).replace(".", ",") + "% a " + String(mx).replace(".", ",") + "%). O certo é todos usarem a mesma conta do negócio: " + money(pb.fx) + " de gastos fixos para " + money(pb.fat) + " de vendas por mês."; }
     }
-    if (!alvo) return null;
+    if (!alvo || S.dados.config.revOk === alvo.f) return null;
     return el("div", { class: "card", id: "p-rev" }, [
       el("h2", { text: "Hora de revisar os preços" }),
       el("div", { class: "hint", text: porque }),
@@ -1188,7 +1189,11 @@ if (typeof document !== "undefined") {
       el("button", { class: "btn", text: "Atualizar todos os produtos", onclick: function () {
         S.dados.produtos.forEach(function (p) { if (p.modo === "pct" && p.f > 0) { p.f = alvo.f; p.fx = alvo.fx; p.fat = alvo.fat; } });
         S.dados.config.precoBase = { fx: alvo.fx, fat: alvo.fat }; salvar(); aviso("Preços refeitos com os números atuais");
-      } })
+      } }),
+      el("button", { class: "btn sec", text: "Manter meus números", onclick: function () {
+        S.dados.config.revOk = alvo.f; salvar(); aviso("Certo. Só aviso de novo se os números mudarem.");
+      } }),
+      el("div", { class: "hint", text: "Mantenha se você somou de propósito algo que o caixa não mostra, como a parcela de uma dívida." })
     ]);
   }
   function viewPrecos() {
