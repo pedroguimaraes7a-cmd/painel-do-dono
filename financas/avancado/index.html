@@ -59,6 +59,7 @@
   .seg { display:grid; grid-template-columns:1fr 1fr; gap:6px; background:var(--bg); padding:5px; border-radius:16px; }
   .seg button { padding:12px; font-size:15px; font-weight:700; border-radius:12px; border:0; background:transparent; color:var(--muted); cursor:pointer; }
   .seg button.on.e { background:var(--in); color:#fff; } .seg button.on.s { background:var(--out); color:#fff; }
+  .seg button.on.p { background:var(--card); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.12); }
   .valor { font-size:30px !important; font-weight:800; text-align:center; letter-spacing:-.5px; }
   .btn { width:100%; margin-top:14px; padding:15px; font-size:16px; font-weight:700; border:0; border-radius:16px; color:#fff; cursor:pointer;
          background:linear-gradient(135deg,var(--acc),var(--acc2)); box-shadow:0 6px 16px rgba(0,0,0,.2); transition:transform .08s; }
@@ -259,23 +260,35 @@ function pontoEquilibrio(l, ym) {
   return { pe: Math.round(fixos / margem), fixos: fixos, margem: margem, motivo: "" };
 }
 /* Todos os valores em centavos, exceto taxas e margem (em %). */
+/* f = gastos fixos como % do faturamento (para quem vende muitos produtos). */
 function precificar(p) {
   var base = (p.c || 0) + (p.o || 0) + (p.r || 0);
-  var t = (p.t || 0) / 100, m = (p.m || 0) / 100;
+  var t = (p.t || 0) / 100, m = (p.m || 0) / 100, f = (p.f || 0) / 100;
   if (t < 0 || t >= 1) return { erro: "Taxas e impostos devem ficar abaixo de 100%" };
+  if (t + f >= 0.9999) return { erro: "Taxas mais gastos fixos chegam a 100% do preço ou mais. Confira o faturamento médio e os gastos fixos." };
   if (base <= 0) return { erro: "Informe o custo do produto" };
-  var den = 1 - t - m;
-  var res = { base: base, minimo: Math.round(base / (1 - t)), erro: "" };
-  if (den <= 0.0001) { res.sugerido = null; res.arredondado = null; res.erro = "Taxas mais lucro desejado chegam a 100% ou mais. Diminua a margem."; }
+  var den = 1 - t - f - m;
+  var res = { base: base, minimo: Math.round(base / (1 - t - f)), erro: "" };
+  if (den <= 0.0001) { res.sugerido = null; res.arredondado = null; res.erro = "Taxas, gastos fixos e lucro desejado chegam a 100% ou mais. Diminua o lucro desejado."; }
   else { res.sugerido = Math.round(base / den); res.arredondado = Math.ceil(res.sugerido / 10) * 10; }
   if (p.p > 0) {
-    res.lucroAtual = Math.round(p.p * (1 - t) - base);
+    res.lucroAtual = Math.round(p.p * (1 - t - f) - base);
     res.margemAtual = res.lucroAtual / p.p;
     res.situacao = res.lucroAtual < 0 ? "prejuizo" : (m > 0 && res.margemAtual < m - 0.0005 ? "abaixo" : "ok");
   }
   return res;
 }
 function rateioFixo(fixos, unidades) { return unidades > 0 ? Math.round(fixos / unidades) : null; }
+/* Gastos fixos em % do faturamento, com uma casa decimal. */
+function pesoFixos(fixos, faturamento) { return faturamento > 0 ? Math.round(fixos / faturamento * 1000) / 10 : null; }
+/* Faturamento médio dos últimos 3 meses fechados que tiveram vendas. */
+function receitaMedia(l, ym) {
+  var s = 0, n = 0;
+  for (var i = 1; i <= 3; i++) { var r = resumo(l, shiftYM(ym, -i)).receita; if (r > 0) { s += r; n++; } }
+  return { media: n ? Math.round(s / n) : 0, meses: n };
+}
+/* Retirada do dono no mês mais completo (atual ou anterior). */
+function retiradaBase(l, ym) { return Math.max(resumo(l, ym).retiradas, resumo(l, shiftYM(ym, -1)).retiradas); }
 function resumoContas(cs, hoje) {
   var lim = addDias(hoje, 7);
   var r = { pagarTotal: 0, pagarAtraso: 0, pagar7: 0, receberTotal: 0, receberAtraso: 0, receber7: 0, qtd: 0 };
@@ -395,7 +408,7 @@ function validarBackup(obj) {
     function ci(v) { return typeof v === "number" && isFinite(v) && v >= 0 ? Math.round(v) : 0; }
     function pc(v, mx) { return typeof v === "number" && isFinite(v) && v >= 0 && v <= mx ? v : 0; }
     produtos.push({ id: String(p.id || ("p" + i)).slice(0, 40), nome: String(p.nome || "").slice(0, 60), c: ci(p.c), o: ci(p.o), r: ci(p.r),
-                    t: pc(p.t, 99), m: pc(p.m, 95), p: ci(p.p), fx: ci(p.fx), un: ci(p.un) });
+                    t: pc(p.t, 99), m: pc(p.m, 95), p: ci(p.p), fx: ci(p.fx), un: ci(p.un), f: pc(p.f, 95), fat: ci(p.fat), modo: p.modo === "un" ? "un" : p.modo === "pct" ? "pct" : "" });
   });
   var lb0 = cfg.lembrete && typeof cfg.lembrete === "object" ? cfg.lembrete : {};
   var lembrete = { on: lb0.on !== false, h: (typeof lb0.h === "number" && lb0.h >= 0 && lb0.h <= 23) ? Math.round(lb0.h) : 20, sem: /^\d{4}-\d{2}-\d{2}$/.test(String(lb0.sem || "")) ? String(lb0.sem) : "" };
@@ -430,7 +443,7 @@ if (typeof module !== "undefined") {
   module.exports = { verificarLicenca: verificarLicenca, resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
                      shiftYM: shiftYM, validarBackup: validarBackup, NICHOS: NICHOS, categoriasDe: categoriasDe,
                      novaCategoria: novaCategoria, textoResumo: textoResumo, ehFixo: ehFixo, addDias: addDias, diasEntre: diasEntre,
-                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo,
+                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase,
                      resumoContas: resumoContas, statusConta: statusConta };
 }
 
@@ -502,7 +515,7 @@ if (typeof document !== "undefined") {
     return e;
   }
   function nicho() { return NICHOS[S.dados.config.nicho] || NICHOS.geral; }
-  function irPara(v) { S.view = v; S.confirma = null; S.novaCat = false; S.pagando = null; S.precEdit = null; S.editLanc = null; S.rasc = null; S.restaurar = null; render(); window.scrollTo(0, 0); }
+  function irPara(v) { S.view = v; S.confirma = null; S.novaCat = false; S.pagando = null; S.precEdit = null; S.precModo = null; S.editLanc = null; S.rasc = null; S.restaurar = null; render(); window.scrollTo(0, 0); }
   /* toast: só mostra o recado, sem redesenhar a tela (não apaga o que a pessoa está digitando). aviso: redesenha uma vez e mostra. */
   var toastT = null;
   function toast(t) {
@@ -1080,7 +1093,9 @@ if (typeof document !== "undefined") {
   };
   function exPreco() { return EXPRECO[S.dados.config.nicho] || EXPRECO.geral; }
   function viewPrecos() {
-    var ed = S.precEdit || { id: null, nome: "", c: 0, o: 0, r: 0, t: 0, m: 20, p: 0, fx: 0, un: 0 };
+    var ed = S.precEdit || { id: null, nome: "", c: 0, o: 0, r: 0, t: 0, m: 20, p: 0, fx: 0, un: 0, f: 0, fat: 0, modo: "" };
+    if (!S.precModo) S.precModo = ed.modo || (ed.un > 0 || (ed.r > 0 && !(ed.f > 0)) ? "un" : "pct");
+    var modo = S.precModo;
     var kids = titulo("Preços");
     kids.push(el("p", { class: "sub", text: "Descubra o preço certo para não perder dinheiro. Preencha para uma unidade do produto ou serviço." }));
     var fNome = el("input", { id: "p-nome", type: "text", maxlength: "60", placeholder: "Ex.: " + exPreco()[0], value: ed.nome });
@@ -1088,7 +1103,9 @@ if (typeof document !== "undefined") {
     var fO = el("input", { id: "p-o", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.o), autocomplete: "off" });
     var fR = el("input", { id: "p-r", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.r), autocomplete: "off" });
     var fUn = el("input", { id: "p-un", type: "text", inputmode: "numeric", placeholder: "Ex.: 200", autocomplete: "off", value: ed.un > 0 ? String(ed.un) : "" });
-    var fFx = el("input", { id: "p-fx", type: "text", inputmode: "decimal", placeholder: "Ex.: 3.000,00", autocomplete: "off", value: fmtIn(ed.fx || 0) });
+    var fFx = el("input", { id: "p-fx", type: "text", inputmode: "decimal", placeholder: "Ex.: 6.000,00", autocomplete: "off", value: fmtIn(ed.fx || 0) });
+    var fFat = el("input", { id: "p-fat", type: "text", inputmode: "decimal", placeholder: "Ex.: 30.000,00", autocomplete: "off", value: fmtIn(ed.fat || 0) });
+    var fixPct = (ed.f > 0 && modo === "pct") ? ed.f : 0;
     var fT = el("input", { id: "p-t", type: "text", inputmode: "decimal", placeholder: "Ex.: 15", value: ed.t ? String(ed.t).replace(".", ",") : "", autocomplete: "off" });
     var fM = el("input", { id: "p-m", type: "text", inputmode: "decimal", placeholder: "Ex.: 20", value: String(ed.m).replace(".", ","), autocomplete: "off" });
     var fP = el("input", { id: "p-p", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.p), autocomplete: "off" });
@@ -1102,9 +1119,26 @@ if (typeof document !== "undefined") {
       return el("div", {}, [el("div", { class: "lrow" }, [el("label", { for: forId, text: texto }), q]), box]);
     }
     function recalc(digitando) {
+      var fx = moneyOuZero(fFx.value);
+      if (modo === "pct") {
+        fR.value = "";
+        var tocouP = fFx.value.trim() !== "" || fFat.value.trim() !== "";
+        if (!tocouP) { fixPct = 0; if (digitando === true) rateioMsg.textContent = ""; return true; }
+        var fat = moneyOuZero(fFat.value);
+        if (fx === null || fat === null) { fixPct = 0; rateioMsg.textContent = "Confira os valores digitados."; return false; }
+        if (fx > 0 && fat > 0) {
+          fixPct = pesoFixos(fx, fat);
+          if (fixPct >= 90) { rateioMsg.textContent = "Os gastos fixos estão quase do tamanho do faturamento. Confira os dois valores."; return false; }
+          rateioMsg.textContent = "Gastos fixos de " + money(fx) + " para um faturamento de " + money(fat) + ": eles pesam " + String(fixPct).replace(".", ",") + "% de cada venda. Essa fatia entra na conta do preço, como as taxas.";
+          return true;
+        }
+        fixPct = 0; rateioMsg.textContent = "Preencha os dois campos (gastos fixos e faturamento médio) para calcular o peso dos gastos fixos.";
+        return fx === 0 && !(fat > 0);
+      }
+      fixPct = 0;
       var tocou = fFx.value.trim() !== "" || fUn.value.trim() !== "";
       if (!tocou) { if (digitando === true) { fR.value = ""; rateioMsg.textContent = ""; } return true; }
-      var fx = moneyOuZero(fFx.value), un = parseInt(String(fUn.value).replace(/\D/g, ""), 10);
+      var un = parseInt(String(fUn.value).replace(/\D/g, ""), 10);
       if (fx === null) { fR.value = ""; rateioMsg.textContent = "Confira o valor dos gastos fixos."; return false; }
       if (fx > 0 && un > 0) {
         var por = rateioFixo(fx, un); fR.value = fmtIn(por);
@@ -1115,15 +1149,21 @@ if (typeof document !== "undefined") {
       rateioMsg.textContent = "Preencha os dois campos (gastos do mês e quantidade vendida) para dividir os gastos fixos.";
       return fx === 0 && !(un > 0);
     }
-    fFx.addEventListener("input", function () { recalc(true); }); fUn.addEventListener("input", function () { recalc(true); });
-    if (ed.fx > 0 && ed.un > 0) recalc();
-    else if (ed.r > 0) rateioMsg.textContent = "Este produto já inclui " + money(ed.r) + " de gastos fixos em cada unidade. Para refazer essa conta, preencha os dois campos acima.";
+    fFx.addEventListener("input", function () { recalc(true); }); fUn.addEventListener("input", function () { recalc(true); }); fFat.addEventListener("input", function () { recalc(true); });
+    if (ed.fx > 0 && (ed.un > 0 || ed.fat > 0)) recalc();
+    else if (ed.r > 0 && modo === "un") rateioMsg.textContent = "Este produto já inclui " + money(ed.r) + " de gastos fixos em cada unidade. Para refazer essa conta, preencha os dois campos acima.";
+    function lerRasc() {
+      var r = { nome: fNome.value, c: moneyOuZero(fC.value) || 0, o: moneyOuZero(fO.value) || 0, t: parsePct(fT.value) || 0, m: parsePct(fM.value) === null ? 20 : parsePct(fM.value), p: moneyOuZero(fP.value) || 0, fx: moneyOuZero(fFx.value) || 0 };
+      return r;
+    }
     function ler() {
       if (!recalc()) return null;
-      var o = { c: moneyOuZero(fC.value), o: moneyOuZero(fO.value), r: moneyOuZero(fR.value), t: parsePct(fT.value), m: parsePct(fM.value), p: moneyOuZero(fP.value) };
+      var o = { c: moneyOuZero(fC.value), o: moneyOuZero(fO.value), r: modo === "un" ? moneyOuZero(fR.value) : 0, t: parsePct(fT.value), m: parsePct(fM.value), p: moneyOuZero(fP.value) };
       if (o.c === null || o.o === null || o.r === null || o.p === null || o.t === null || o.m === null) return null;
-      var fxv = moneyOuZero(fFx.value), unv = parseInt(String(fUn.value).replace(/\D/g, ""), 10);
-      o.fx = fxv > 0 && unv > 0 ? fxv : 0; o.un = fxv > 0 && unv > 0 ? unv : 0;
+      var fxv = moneyOuZero(fFx.value), unv = parseInt(String(fUn.value).replace(/\D/g, ""), 10), fatv = moneyOuZero(fFat.value);
+      o.modo = modo;
+      if (modo === "un") { o.fx = fxv > 0 && unv > 0 ? fxv : 0; o.un = fxv > 0 && unv > 0 ? unv : 0; o.f = 0; o.fat = 0; }
+      else { o.f = fixPct || 0; o.fx = o.f > 0 ? fxv : 0; o.fat = o.f > 0 ? fatv : 0; o.un = 0; }
       return o;
     }
     function mostra(r, o) {
@@ -1137,9 +1177,10 @@ if (typeof document !== "undefined") {
       if (r.erro) card.appendChild(el("div", { class: "tip", text: r.erro }));
       card.appendChild(el("div", { class: "hint", text: "O custo de cada unidade é " + money(r.base) + ". Cobrando menos de " + money(r.minimo) + ", você perde dinheiro em cada venda." }));
       if (r.sugerido !== null && r.sugerido !== undefined) {
-        var pv = r.arredondado, tx = Math.round(pv * (o.t || 0) / 100), lu = pv - tx - r.base;
-        card.appendChild(el("div", { class: "resumo", text: "Cobrando " + money(pv) + ": " + money(r.base) + " cobrem os custos, " + money(tx) + " vão para taxas e impostos, e " + money(lu) + " sobram de lucro (" + Math.round(lu / pv * 100) + "% do preço)." }));
-        if (!(o.r > 0)) card.appendChild(el("div", { class: "hint", text: "Atenção: você não incluiu os gastos fixos (aluguel, luz, salário). Se incluir, o preço sobe para cobrir também esses gastos." }));
+        var pv = r.arredondado, tx = Math.round(pv * (o.t || 0) / 100), fxp = Math.round(pv * (o.f || 0) / 100), lu = pv - tx - fxp - r.base;
+        card.appendChild(el("div", { class: "resumo", text: "Cobrando " + money(pv) + ": " + money(r.base) + (o.f > 0 ? " pagam o produto, " + money(fxp) + " ajudam a pagar os gastos fixos do mês, " : " cobrem os custos, ") + money(tx) + " vão para taxas e impostos, e " + money(lu) + " sobram de lucro (" + Math.round(lu / pv * 100) + "% do preço)." }));
+        if (o.f > 0) card.appendChild(el("div", { class: "hint", text: "A conta: " + money(r.base) + " ÷ (1 – " + String(o.t || 0).replace(".", ",") + "% de taxas – " + String(o.f).replace(".", ",") + "% de fixos – " + String(o.m || 0).replace(".", ",") + "% de lucro) = " + money(r.sugerido) + ", arredondado para cima. O preço mínimo, " + money(r.minimo) + ", paga o produto, as taxas e a parte dos gastos fixos, sem lucro." }));
+        if (!(o.r > 0) && !(o.f > 0)) card.appendChild(el("div", { class: "hint", text: "Atenção: você não incluiu os gastos fixos (aluguel, luz, salário). Se incluir, o preço sobe para cobrir também esses gastos." }));
       }
       if (o.p > 0) {
         var txt, cls;
@@ -1150,9 +1191,9 @@ if (typeof document !== "undefined") {
       }
       card.appendChild(el("button", { class: "btn", text: ed.id ? "Atualizar este produto" : "Salvar este produto", onclick: function () {
         var lst = S.dados.produtos;
-        var item = { id: ed.id || novoId(), nome: fNome.value.trim() || "Produto sem nome", c: o.c, o: o.o, r: o.r, t: o.t, m: o.m, p: o.p, fx: o.fx || 0, un: o.un || 0 };
+        var item = { id: ed.id || novoId(), nome: fNome.value.trim() || "Produto sem nome", c: o.c, o: o.o, r: o.r, t: o.t, m: o.m, p: o.p, fx: o.fx || 0, un: o.un || 0, f: o.f || 0, fat: o.fat || 0, modo: o.modo };
         if (ed.id) { for (var i = 0; i < lst.length; i++) if (lst[i].id === ed.id) lst[i] = item; } else lst.push(item);
-        S.precEdit = null; salvar(); aviso("Produto salvo");
+        S.precEdit = null; S.precModo = null; salvar(); aviso("Produto salvo");
       } }));
       res.appendChild(card);
     }
@@ -1160,15 +1201,33 @@ if (typeof document !== "undefined") {
       rot("p-nome", "Nome do produto ou serviço", "Só para você reconhecer depois, na sua lista. Exemplos: Pizza grande, Corte de cabelo, Livro."), fNome,
       rot("p-c", "Quanto custa fazer 1 unidade? (" + exPreco()[1].toLowerCase() + ")", "Some só o que você gasta para fazer UMA unidade: ingredientes, material, peças. Exemplo: se uma caixa com 10 custa R$ 50, cada unidade custa R$ 5,00."), fC,
       rot("p-o", "Outros custos de cada unidade (" + exPreco()[2].toLowerCase() + "...)", "Gastos extras de cada unidade vendida: embalagem, gás, entrega, frete. Não coloque aluguel nem salário aqui: eles vão no campo de baixo."), fO,
-      rot("p-fx", "Gastos fixos do mês, no total (opcional)", "São os gastos que você paga todo mês, mesmo sem vender nada: aluguel, luz, internet, salário. Digite o total do mês (exemplo: 2.000,00). O painel divide pela quantidade vendida e inclui no preço. Se não souber, deixe em branco, mas aí o preço não cobre esses gastos."), fFx,
-      rot("p-un", "Quantas unidades você vende por mês?", "Quantas pizzas, cortes, peças ou serviços você vende em um mês normal. Se não souber, coloque um número baixo e ajuste depois. Quanto menos você vende, mais cada unidade precisa pagar dos gastos fixos."), fUn,
-      el("button", { class: "btn sec", style: "margin-top:8px", text: "Usar os gastos fixos que já lancei no painel", onclick: function () {
-        var fx = fixosBase(S.dados.lanc, hoje().slice(0, 7));
-        if (fx <= 0) { toast("Ainda não há gastos fixos lançados"); return; }
-        fFx.value = fmtIn(fx); recalc();
+      el("h2", { style: "margin-top:14px", text: "Gastos fixos do negócio" }),
+      el("div", { class: "hint", text: "Aluguel, luz, internet, salários e o seu salário também precisam sair das vendas. Escolha como dividir:" }),
+      el("div", { class: "seg", style: "margin-top:8px" }, [
+        el("button", { class: modo === "pct" ? "on p" : "p", type: "button", text: "Pelo faturamento", onclick: function () { S.precModo = "pct"; S.precEdit = Object.assign({}, ed, lerRasc()); render(); } }),
+        el("button", { class: modo === "un" ? "on p" : "p", type: "button", text: "Por unidade", onclick: function () { S.precModo = "un"; S.precEdit = Object.assign({}, ed, lerRasc()); render(); } })
+      ]),
+      el("div", { class: "hint", text: modo === "pct" ? "Melhor para quem vende vários produtos (loja, mercadinho, cosméticos): os gastos fixos viram uma porcentagem de cada venda." : "Melhor para quem vende um produto principal (pizza, corte, marmita): os gastos fixos são divididos pela quantidade vendida no mês." }),
+      rot("p-fx", "Gastos fixos do mês, no total (com o seu salário)", "Some tudo o que você paga todo mês, mesmo sem vender nada: aluguel, luz, água, internet, contador, funcionários e a sua retirada (o seu salário de dono). Exemplo: 6.000,00. Se deixar em branco, o preço não cobre esses gastos."), fFx,
+      modo === "pct"
+        ? rot("p-fat", "Quanto o negócio vende por mês, em média", "O faturamento de um mês normal: tudo o que entra com as vendas, antes de pagar qualquer coisa. Use a média dos últimos 3 meses. Se o negócio é novo, faça uma estimativa honesta e ajuste depois de alguns meses de lançamentos. Quanto menos você vende, maior o peso dos gastos fixos em cada venda.")
+        : rot("p-un", "Quantas unidades você vende por mês?", "Quantas pizzas, cortes, peças ou serviços você vende em um mês normal. Se não souber, coloque um número baixo e ajuste depois. Quanto menos você vende, mais cada unidade precisa pagar dos gastos fixos."),
+      modo === "pct" ? fFat : fUn,
+      el("button", { class: "btn sec", style: "margin-top:8px", text: "Puxar esses números do meu caixa", onclick: function () {
+        var ym = hoje().slice(0, 7), l = S.dados.lanc;
+        var fx = fixosBase(l, ym), pro = (S.dados.config.pro && S.dados.config.pro.custo) || 0, ret = pro > 0 ? pro : retiradaBase(l, ym);
+        if (fx <= 0 && ret <= 0) { toast("Ainda não há gastos fixos lançados. Digite o valor."); return; }
+        fFx.value = fmtIn(fx + ret);
+        var partes = "Gastos fixos lançados: " + money(fx) + (ret > 0 ? " + o seu salário (" + (pro > 0 ? "do Salário do Dono" : "retiradas lançadas") + "): " + money(ret) : " (sem salário do dono: some o seu, se ainda não lançou)") + ".";
+        if (modo === "pct") {
+          var rm = receitaMedia(l, ym);
+          if (rm.meses > 0) { fFat.value = fmtIn(rm.media); partes += " Faturamento médio de " + rm.meses + (rm.meses === 1 ? " mês fechado" : " meses fechados") + ": " + money(rm.media) + "."; }
+          else partes += " Ainda não há um mês fechado de vendas lançado: digite quanto o negócio vende em média.";
+        }
+        recalc(); rateioMsg.textContent = partes + " " + rateioMsg.textContent;
       } }), rateioMsg,
-      rot("p-t", "Taxas e impostos sobre a venda (%)", "Some tudo o que é descontado do valor da venda: taxa da maquininha, taxa do aplicativo, imposto. Exemplo: maquininha 3% + imposto 5% = digite 8. Se não tem nenhuma, deixe em branco."), fT,
-      rot("p-m", "Lucro que você quer em cada venda (%)", "Quanto você quer que sobre limpo de cada venda. Exemplo: 20 quer dizer que, de cada R$ 100 que o cliente paga, R$ 20 sobram para você, já descontados os custos e as taxas. Não é o quanto você soma em cima do custo."), fM,
+      rot("p-t", "Taxas e impostos sobre a venda (%)", "Some tudo o que sai como porcentagem de cada venda: maquininha, aplicativo, imposto, comissão, e também frete e cupom quando você paga uma porcentagem do preço. Exemplo: maquininha 5% + frete 9% + cupom 10% = digite 24. Se não tem nenhuma, deixe em branco."), fT,
+      rot("p-m", "Lucro que você quer em cada venda (%)", "Quanto você quer que sobre limpo de cada venda, depois de pagar o produto, as taxas e os gastos fixos (com o seu salário). Se quiser guardar uma parte para reinvestir no negócio, some aqui: 15% de lucro + 5% para reinvestir = digite 20. Não é o quanto você soma em cima do custo."), fM,
       rot("p-p", "Preço que você cobra hoje (opcional)", "Se você já vende esse produto, digite o preço atual. O painel mostra se você está ganhando ou perdendo dinheiro com ele. Se não souber, deixe em branco."), fP,
       el("button", { class: "btn", text: "Calcular preço", onclick: function () {
         var o = ler();
@@ -1188,7 +1247,7 @@ if (typeof document !== "undefined") {
         el("div", { class: "l" }, [el("span", { text: p.nome }),
           el("small", { text: r.sugerido ? "Preço ideal " + money(r.arredondado) + (p.p > 0 ? " · hoje " + money(p.p) : "") : "Confira os dados" }), st ? el("small", { class: cls, text: st }) : null]),
         el("div", { class: "r" }, [
-          el("button", { class: "del", text: "Editar", onclick: function () { S.precEdit = p; render(); window.scrollTo(0, 0); } }), el("br"),
+          el("button", { class: "del", text: "Editar", onclick: function () { S.precEdit = p; S.precModo = null; render(); window.scrollTo(0, 0); } }), el("br"),
           el("button", { class: "del", text: pedindo ? "Toque para confirmar" : "Excluir", onclick: function () {
             if (!pedindo) { S.confirma = p.id; render(); return; }
             S.dados.produtos = S.dados.produtos.filter(function (y) { return y.id !== p.id; }); S.confirma = null; salvar(); render();
