@@ -175,6 +175,21 @@ function resumo(l, ym) {
            lucro: receita - custos, retiradas: retiradas, qtd: m.length,
            margem: receita > 0 ? (receita - custos) / receita : null };
 }
+/* Resumo do mês só até um dia (para comparar mês em andamento com o mesmo período de outro mês). */
+function resumoAte(l, ym, dia) {
+  var lim = ym + "-" + (dia < 10 ? "0" : "") + dia;
+  return resumo(l.filter(function (x) { return x.d.slice(0, 7) !== ym || x.d <= lim; }), ym);
+}
+/* Variação percentual, inteira; null quando não há base para comparar. */
+function variacao(atual, antes) {
+  if (!antes) return null;
+  return Math.round((atual - antes) / Math.abs(antes) * 100);
+}
+/* Parcelas de dívidas: saídas que não contam no lucro e não são retirada nem investimento. */
+function parcelasBase(l, ym) {
+  function soma(m) { return somar(doMes(l, m).filter(function (x) { return x.t === "s" && x.a !== 1 && !x.k; })); }
+  return Math.max(soma(ym), soma(shiftYM(ym, -1)));
+}
 function porMes(l, ano) {
   var r = [];
   for (var i = 1; i <= 12; i++) {
@@ -476,7 +491,7 @@ if (typeof module !== "undefined") {
   module.exports = { verificarLicenca: verificarLicenca, resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
                      shiftYM: shiftYM, validarBackup: validarBackup, NICHOS: NICHOS, categoriasDe: categoriasDe,
                      novaCategoria: novaCategoria, textoResumo: textoResumo, ehFixo: ehFixo, addDias: addDias, diasEntre: diasEntre,
-                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase, pesoCaixa: pesoCaixa, vendasPorProduto: vendasPorProduto,
+                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase, pesoCaixa: pesoCaixa, vendasPorProduto: vendasPorProduto, resumoAte: resumoAte, variacao: variacao, parcelasBase: parcelasBase,
                      resumoContas: resumoContas, statusConta: statusConta };
 }
 
@@ -1199,7 +1214,7 @@ if (typeof document !== "undefined") {
     var fT = el("input", { id: "p-t", type: "text", inputmode: "decimal", placeholder: "Ex.: 15", value: ed.t ? String(ed.t).replace(".", ",") : "", autocomplete: "off" });
     var fM = el("input", { id: "p-m", type: "text", inputmode: "decimal", placeholder: "Ex.: 20", value: String(ed.m).replace(".", ","), autocomplete: "off" });
     var fP = el("input", { id: "p-p", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.p), autocomplete: "off" });
-    var rateioMsg = el("div", { class: "hint" });
+    var rateioMsg = el("div", { class: "hint" }), parcBox = el("div", { id: "p-parc" });
     var res = el("div", { id: "p-res" });
     var ultimo = null;
     function rot(forId, texto, ajudaTxt) {
@@ -1300,7 +1315,7 @@ if (typeof document !== "undefined") {
         el("button", { class: modo === "un" ? "on p" : "p", type: "button", text: "Por unidade", onclick: function () { S.precModo = "un"; S.precEdit = Object.assign({}, ed, lerRasc()); render(); } })
       ]),
       el("div", { class: "hint", text: modo === "pct" ? "Melhor para quem vende vários produtos ou serviços: os gastos fixos viram uma porcentagem de cada venda, e cada item paga na proporção do que vende." : "Melhor para quem vende um produto ou serviço principal: os gastos fixos são divididos pela quantidade vendida no mês." }),
-      rot("p-fx", "Gastos fixos do mês, no total (com o seu salário)", "Some tudo o que você paga todo mês, mesmo sem vender nada: aluguel, luz, água, internet, contador, funcionários e a sua retirada (o seu salário de dono). Exemplo: 6.000,00. Se deixar em branco, o preço não cobre esses gastos."), fFx,
+      rot("p-fx", "Gastos fixos do mês, no total (com o seu salário)", "Some tudo o que você paga todo mês, mesmo sem vender nada: aluguel, luz, água, internet, contador, funcionários e a sua retirada (o seu salário de dono). Exemplo: 6.000,00. Se o negócio está pagando dívidas (empréstimo, cartão, fornecedor atrasado), some também a parcela do mês enquanto estiver pagando: o preço precisa gerar dinheiro para ela. Se deixar em branco, o preço não cobre esses gastos."), fFx,
       modo === "pct"
         ? rot("p-fat", "Quanto o negócio vende por mês, em média", "O faturamento de um mês normal: tudo o que entra com as vendas, antes de pagar qualquer coisa. Use a média dos últimos 3 meses. Se o negócio é novo, faça uma estimativa honesta e ajuste depois de alguns meses de lançamentos. Quanto menos você vende, maior o peso dos gastos fixos em cada venda.")
         : rot("p-un", "Quantas unidades você vende por mês?", exPreco()[4] + " você vende em um mês normal. Se não souber, coloque um número baixo e ajuste depois. Quanto menos você vende, mais cada unidade precisa pagar dos gastos fixos."),
@@ -1317,7 +1332,16 @@ if (typeof document !== "undefined") {
           else partes += " Ainda não há um mês fechado de vendas lançado: digite quanto o negócio vende em média.";
         }
         recalc(); rateioMsg.textContent = partes + " " + rateioMsg.textContent;
-      } }), rateioMsg,
+        var parc = parcelasBase(l, ym);
+        parcBox.innerHTML = "";
+        if (parc > 0) {
+          parcBox.appendChild(el("div", { class: "tip", text: "Você lançou " + money(parc) + " em parcelas de dívidas. Elas não entram no lucro, mas saem do caixa todo mês. Enquanto estiver pagando, o mais seguro é somar no preço." }));
+          parcBox.appendChild(el("button", { class: "btn sec", text: "Somar as parcelas (" + money(parc) + ")", onclick: function () {
+            fFx.value = fmtIn((moneyOuZero(fFx.value) || 0) + parc); parcBox.innerHTML = ""; recalc();
+            rateioMsg.textContent = "Parcelas somadas aos gastos fixos. " + rateioMsg.textContent;
+          } }));
+        }
+      } }), rateioMsg, parcBox,
       herdou && modo === "pct" ? el("div", { class: "hint", text: "Trouxe os gastos fixos e o faturamento que você usou nos outros produtos, para todos ficarem com a mesma conta. Mude só se o negócio mudou." }) : null,
       rot("p-t", "Taxas e impostos sobre a venda (%)", "Some tudo o que sai como porcentagem de cada venda: maquininha, aplicativo, imposto, comissão, e também frete e cupom quando você paga uma porcentagem do preço. Exemplo: maquininha 5% + frete 9% + cupom 10% = digite 24. Se não tem nenhuma, deixe em branco."), fT,
       rot("p-m", "Lucro que você quer em cada venda (%)", "Quanto você quer que sobre limpo de cada venda, depois de pagar o produto, as taxas e os gastos fixos (com o seu salário). Se quiser guardar uma parte para reinvestir no negócio, some aqui: 15% de lucro + 5% para reinvestir = digite 20. Não é o quanto você soma em cima do custo."), fM,
@@ -1435,11 +1459,30 @@ if (typeof document !== "undefined") {
     if (PRO) kids.push(el("button", { class: "btn", text: "Salário do Dono: quanto posso tirar", onclick: function () { irPara("salario"); } }));
     if (AV) kids = kids.concat(cardsMetaEquilibrio(s));
     if (AV && S.dados.produtos.length) kids.push(cardProdutos());
-    var comp = el("div", { class: "card" }, [el("h2", { text: "Este mês contra o anterior" })]);
-    [["Vendas", s.receita, a.receita], ["Custos e despesas", s.custos, a.custos], ["Lucro", s.lucro, a.lucro]].forEach(function (r) {
+    var hj = hoje(), andamento = S.ym === hj.slice(0, 7), dia = parseInt(hj.slice(8, 10), 10);
+    var ultDia = new Date(+S.ym.slice(0, 4), +S.ym.slice(5, 7), 0).getDate();
+    var ca = andamento && dia < ultDia ? resumoAte(l, S.ym, dia) : s, cb = andamento && dia < ultDia ? resumoAte(l, shiftYM(S.ym, -1), dia) : a;
+    var comp = el("div", { class: "card", id: "c-comp" }, [el("h2", { text: "Este mês contra o anterior" })]);
+    if (ca !== s) comp.appendChild(el("div", { class: "hint", text: "O mês ainda não acabou: comparando do dia 1 ao dia " + dia + " dos dois meses, para a comparação ser justa." }));
+    function seta(v, bomSubir) {
+      if (v === null) return el("small", { class: "sub", text: "  sem base" });
+      var bom = v === 0 ? null : (v > 0) === bomSubir;
+      return el("small", { class: bom === null ? "sub" : bom ? "pos" : "neg", text: "  " + (v > 0 ? "▲ " : v < 0 ? "▼ " : "= ") + Math.abs(v) + "%" });
+    }
+    [["Vendas", ca.receita, cb.receita, true], ["Custos e despesas", ca.custos, cb.custos, false], ["Lucro", ca.lucro, cb.lucro, true]].forEach(function (r) {
       comp.appendChild(el("div", { class: "item" }, [el("span", { text: r[0] }),
-        el("span", { class: "r" }, [el("b", { text: money(r[1]) }), el("small", { class: "sub", text: "  (antes: " + money(r[2]) + ")" })])]));
+        el("span", { class: "r" }, [el("b", { text: money(r[1]) }), seta(variacao(r[1], r[2]), r[3]), el("br"), el("small", { class: "sub", text: "antes: " + money(r[2]) })])]));
     });
+    var ymAno = shiftYM(S.ym, -12), sAno = andamento && dia < ultDia ? resumoAte(l, ymAno, dia) : resumo(l, ymAno);
+    if (sAno.receita > 0) {
+      var va = variacao(ca.receita, sAno.receita);
+      comp.appendChild(el("div", { class: "tip", text: "Vendas contra " + nomeMes(ymAno) + ": " + (va > 0 ? "cresceram " + va + "%" : va < 0 ? "caíram " + (-va) + "%" : "ficaram iguais") + " (" + money(sAno.receita) + " naquele mês" + (ca !== s ? ", no mesmo período" : "") + ")." }));
+    }
+    var tri = [1, 2, 3].map(function (i) { return resumo(l, shiftYM(S.ym, -i)).receita; }), tri0 = [4, 5, 6].map(function (i) { return resumo(l, shiftYM(S.ym, -i)).receita; });
+    if (tri.every(function (v) { return v > 0; }) && tri0.every(function (v) { return v > 0; })) {
+      var vt = variacao(tri[0] + tri[1] + tri[2], tri0[0] + tri0[1] + tri0[2]);
+      comp.appendChild(el("div", { class: "hint", text: "Tendência: as vendas dos últimos 3 meses fechados " + (vt > 0 ? "cresceram " + vt + "%" : vt < 0 ? "caíram " + (-vt) + "%" : "ficaram iguais") + " em relação aos 3 meses antes deles." }));
+    }
     kids.push(comp);
     var g = el("div", { class: "card" }, [
       el("div", { class: "nav" }, [
