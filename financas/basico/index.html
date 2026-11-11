@@ -287,6 +287,34 @@ function receitaMedia(l, ym) {
   for (var i = 1; i <= 3; i++) { var r = resumo(l, shiftYM(ym, -i)).receita; if (r > 0) { s += r; n++; } }
   return { media: n ? Math.round(s / n) : 0, meses: n };
 }
+/* Peso dos gastos fixos medido no caixa: fixos lançados + salário do dono, sobre o faturamento médio.
+   Só confia quando há gastos fixos lançados e pelo menos 2 meses fechados de vendas. */
+function pesoCaixa(l, ym, pro) {
+  var fx = fixosBase(l, ym), ret = pro && pro.custo > 0 ? pro.custo : retiradaBase(l, ym), rm = receitaMedia(l, ym);
+  if (fx <= 0 || rm.meses < 2 || rm.media <= 0) return null;
+  return { fx: fx + ret, fat: rm.media, f: pesoFixos(fx + ret, rm.media), meses: rm.meses };
+}
+/* Vendas do mês por produto (lançamentos de entrada com produto escolhido), com lucro estimado
+   pelos custos salvos em Preços. */
+function vendasPorProduto(l, ym, produtos) {
+  var por = {}, sem = 0;
+  l.forEach(function (x) {
+    if (x.t !== "e" || x.a !== 1 || x.d.slice(0, 7) !== ym) return;
+    if (!x.pr) { sem += x.v; return; }
+    if (!por[x.pr]) por[x.pr] = { id: x.pr, q: 0, v: 0 };
+    por[x.pr].q += x.q > 0 ? x.q : 1; por[x.pr].v += x.v;
+  });
+  var lista = Object.keys(por).map(function (k) {
+    var r = por[k], p = null;
+    for (var i = 0; i < produtos.length; i++) if (produtos[i].id === k) p = produtos[i];
+    r.nome = p ? p.nome : "Produto excluído";
+    if (p) { var base = (p.c || 0) + (p.o || 0) + (p.r || 0); r.lucro = Math.round(r.v * (1 - ((p.t || 0) + (p.f || 0)) / 100)) - base * r.q; }
+    else r.lucro = null;
+    return r;
+  });
+  lista.sort(function (a, b) { return b.v - a.v; });
+  return { lista: lista, sem: sem };
+}
 /* Retirada do dono no mês mais completo (atual ou anterior). */
 function retiradaBase(l, ym) { return Math.max(resumo(l, ym).retiradas, resumo(l, shiftYM(ym, -1)).retiradas); }
 function resumoContas(cs, hoje) {
@@ -377,9 +405,11 @@ function validarBackup(obj) {
     if (x.t !== "e" && x.t !== "s") return null;
     if (typeof x.v !== "number" || !isFinite(x.v) || x.v <= 0 || Math.floor(x.v) !== x.v) return null;
     var a = x.a === 1 ? 1 : 0, c = String(x.c || "").slice(0, 80);
-    out.push({ id: String(x.id || ("i" + i)).slice(0, 40), d: x.d, t: x.t, c: c, v: x.v,
+    var lo = { id: String(x.id || ("i" + i)).slice(0, 40), d: x.d, t: x.t, c: c, v: x.v,
                o: String(x.o || "").slice(0, 200), a: a, k: x.k === "retirada" || x.k === "invest" ? x.k : "",
-               x: x.x === 1 || (x.x === undefined && x.t === "s" && a === 1 && ehFixo(c)) ? 1 : 0 });
+               x: x.x === 1 || (x.x === undefined && x.t === "s" && a === 1 && ehFixo(c)) ? 1 : 0 };
+    if (x.t === "e" && typeof x.pr === "string" && x.pr) { lo.pr = x.pr.slice(0, 40); lo.q = typeof x.q === "number" && x.q >= 1 && x.q <= 99999 ? Math.floor(x.q) : 1; }
+    out.push(lo);
   }
   var cfg = obj.config || {};
   var custom = { e: [], s: [] };
@@ -415,9 +445,12 @@ function validarBackup(obj) {
   var pr0 = cfg.pro && typeof cfg.pro === "object" ? cfg.pro : {};
   var pro = { custo: typeof pr0.custo === "number" && isFinite(pr0.custo) && pr0.custo > 0 && pr0.custo < 1e10 ? Math.round(pr0.custo) : 0, pot: potesValidos(pr0.pot) ? pr0.pot.slice(0, 4) : POTES_PADRAO.slice() };
   var meta = typeof cfg.meta === "number" && isFinite(cfg.meta) && cfg.meta > 0 ? Math.round(cfg.meta) : 0;
-  return { lanc: out, contas: contas, produtos: produtos,
-           config: { negocio: String(cfg.negocio || "").slice(0, 60), nicho: NICHOS[cfg.nicho] ? cfg.nicho : "geral",
-                     tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta, lembrete: lembrete, pro: pro, som: cfg.som !== false } };
+  var pb0 = cfg.precoBase && typeof cfg.precoBase === "object" ? cfg.precoBase : null;
+  var precoBase = pb0 && pb0.fx > 0 && pb0.fat > 0 && pb0.fx < 1e10 && pb0.fat < 1e11 ? { fx: Math.round(pb0.fx), fat: Math.round(pb0.fat) } : null;
+  var conf = { negocio: String(cfg.negocio || "").slice(0, 60), nicho: NICHOS[cfg.nicho] ? cfg.nicho : "geral",
+                     tema: cfg.tema === "claro" || cfg.tema === "escuro" ? cfg.tema : "auto", custom: custom, meta: meta, lembrete: lembrete, pro: pro, som: cfg.som !== false };
+  if (precoBase) conf.precoBase = precoBase;
+  return { lanc: out, contas: contas, produtos: produtos, config: conf };
 }
 
 /* ---------- Licença (ativação por código assinado) ---------- */
@@ -443,7 +476,7 @@ if (typeof module !== "undefined") {
   module.exports = { verificarLicenca: verificarLicenca, resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
                      shiftYM: shiftYM, validarBackup: validarBackup, NICHOS: NICHOS, categoriasDe: categoriasDe,
                      novaCategoria: novaCategoria, textoResumo: textoResumo, ehFixo: ehFixo, addDias: addDias, diasEntre: diasEntre,
-                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase,
+                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase, pesoCaixa: pesoCaixa, vendasPorProduto: vendasPorProduto,
                      resumoContas: resumoContas, statusConta: statusConta };
 }
 
@@ -900,8 +933,26 @@ if (typeof document !== "undefined") {
     else if (rasc.c !== undefined && rasc.t === S.tipo) sel.value = rasc.c;
     else if (edit && edit.t === S.tipo) sel.value = idxEdit >= 0 ? String(idxEdit) : "orig";
     var data = el("input", { id: "f-data", type: "date", value: rasc.d || (edit ? edit.d : hoje()) });
-    var obs = el("input", { id: "f-obs", type: "text", maxlength: "200", placeholder: "Ex.: " + exN(1), value: rasc.o !== undefined ? rasc.o : (edit ? edit.o : "") });
-    function trocaTipo(t) { S.rasc = { v: valor.value, d: data.value, o: obs.value, c: sel.value, t: S.tipo }; S.tipo = t; S.novaCat = false; render(); }
+    var obs = el("input", { id: "f-obs", type: "text", maxlength: "200", placeholder: S.tipo === "e" ? "Ex.: pagou no Pix, cliente de sempre" : "Ex.: " + exN(1), value: rasc.o !== undefined ? rasc.o : (edit ? edit.o : "") });
+    var temProd = AV && S.tipo === "e" && S.dados.produtos.length > 0;
+    var fProd = el("select", { id: "f-prod" }, [el("option", { value: "", text: "Não escolher produto" })].concat(S.dados.produtos.map(function (p) { return el("option", { value: p.id, text: p.nome }); })));
+    var fQtd = el("input", { id: "f-qtd", type: "text", inputmode: "numeric", placeholder: "1", autocomplete: "off" });
+    var prIni = rasc.pr !== undefined ? rasc.pr : (edit && edit.pr ? edit.pr : "");
+    if (prIni && S.dados.produtos.some(function (p) { return p.id === prIni; })) fProd.value = prIni;
+    fQtd.value = rasc.q !== undefined ? rasc.q : (edit && edit.pr ? String(edit.q || 1) : "");
+    var auto = false, prodDica = el("div", { class: "hint" });
+    function precoUnit(p) { if (p.p > 0) return p.p; var r = precificar(p); return r.arredondado || 0; }
+    function prodMuda() {
+      var p = S.dados.produtos.filter(function (x) { return x.id === fProd.value; })[0];
+      if (!p) { prodDica.textContent = ""; return; }
+      var q = parseInt(String(fQtd.value).replace(/\D/g, ""), 10) || 1, pu = precoUnit(p);
+      if (pu > 0 && (auto || valor.value.trim() === "")) { valor.value = fmtIn(pu * q); auto = true; }
+      prodDica.textContent = pu > 0 ? q + " × " + money(pu) + (p.p > 0 ? " (preço que você cobra)" : " (preço ideal)") + ". Se vendeu por outro valor, é só mudar o valor acima." : "";
+    }
+    fProd.addEventListener("change", prodMuda); fQtd.addEventListener("input", prodMuda);
+    valor.addEventListener("input", function () { auto = false; });
+    if (temProd && fProd.value) prodMuda();
+    function trocaTipo(t) { S.rasc = { v: valor.value, d: data.value, o: obs.value, c: sel.value, t: S.tipo, pr: fProd.value, q: fQtd.value }; S.tipo = t; S.novaCat = false; render(); }
     var dica = el("div", { class: "hint" });
     var nomeNovo = el("input", { id: "f-novo", type: "text", maxlength: "40", placeholder: "Ex.: " + exN(2) });
     var chk = el("input", { id: "f-conta", type: "checkbox" }); chk.checked = true;
@@ -934,14 +985,17 @@ if (typeof document !== "undefined") {
         S.dados.config.custom[S.tipo].push(r.cat); c = r.cat;
       } else if (sel.value !== "orig") c = cats[parseInt(sel.value, 10)];
       var ymN = data.value.slice(0, 7), antes = resumo(S.dados.lanc, ymN).receita, metaV = S.dados.config.meta || 0;
+      var qn = parseInt(String(fQtd.value).replace(/\D/g, ""), 10);
+      if (temProd && fProd.value && fQtd.value.trim() !== "" && !(qn >= 1 && qn <= 99999)) { toast("Confira a quantidade"); fQtd.focus(); return; }
+      function comProduto(o) { if (temProd && fProd.value) { o.pr = fProd.value; o.q = qn >= 1 ? qn : 1; } return o; }
       if (edit) {
         var novo = c ? montaLanc(data.value, S.tipo, c, v, obs.value.trim()) : { id: edit.id, d: data.value, t: edit.t, c: edit.c, v: v, o: obs.value.trim(), a: edit.a, k: edit.k || "", x: edit.x || 0 };
-        novo.id = edit.id;
+        novo.id = edit.id; comProduto(novo);
         S.dados.lanc = S.dados.lanc.map(function (y) { return y.id === edit.id ? novo : y; });
         salvar(); S.ym = ymN; S.view = "hist"; S.editLanc = null; S.rasc = null; S.novaCat = false; aviso("Lançamento alterado"); window.scrollTo(0, 0);
         return;
       }
-      S.dados.lanc.push(montaLanc(data.value, S.tipo, c, v, obs.value.trim()));
+      S.dados.lanc.push(comProduto(montaLanc(data.value, S.tipo, c, v, obs.value.trim())));
       var batida = AV && S.tipo === "e" && metaV > 0 && antes < metaV && resumo(S.dados.lanc, ymN).receita >= metaV;
       tocar(batida ? "meta" : S.tipo === "e" ? "moeda" : "pop");
       salvar(); S.ym = ymN; S.novaCat = false;
@@ -956,6 +1010,10 @@ if (typeof document !== "undefined") {
         ]),
         el("label", { for: "f-valor", text: "Valor (R$)" }), valor,
         el("label", { for: "f-cat", text: "Categoria" }), sel, dica, blocoNovo,
+        temProd ? el("div", { class: "grid2", style: "grid-template-columns:2fr 1fr;gap:8px" }, [
+          el("div", null, [el("label", { for: "f-prod", text: "Produto vendido (opcional)" }), fProd]),
+          el("div", null, [el("label", { for: "f-qtd", text: "Quantidade" }), fQtd])]) : null,
+        temProd ? prodDica : null,
         el("label", { for: "f-data", text: "Data" }), data,
         el("label", { for: "f-obs", text: "Observação (opcional)" }), obs,
         el("button", { class: "btn", text: edit ? "Salvar alterações" : "Salvar lançamento", onclick: function () { gravar(false); } }),
@@ -970,6 +1028,7 @@ if (typeof document !== "undefined") {
     return S.dados.lanc.filter(function (x) { return x.d.slice(0, 7) === S.ym; })
       .sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : pos[b.id] - pos[a.id]; });
   }
+  function nomeProd(id) { var p = S.dados.produtos.filter(function (y) { return y.id === id; })[0]; return p ? p.nome : "produto excluído"; }
   function viewHist() {
     var m = doMesOrdenado();
     var lista = el("div", { class: "card" });
@@ -977,7 +1036,7 @@ if (typeof document !== "undefined") {
     m.forEach(function (x) {
       var pedindo = S.confirma === x.id;
       lista.appendChild(el("div", { class: "item" }, [
-        el("div", { class: "l" }, [el("span", { text: x.c }), el("small", { text: dataBR(x.d) + (x.o ? " · " + x.o : "") })]),
+        el("div", { class: "l" }, [el("span", { text: x.c }), el("small", { text: dataBR(x.d) + (x.pr ? " · " + (x.q || 1) + "× " + nomeProd(x.pr) : "") + (x.o ? " · " + x.o : "") })]),
         el("div", { class: "r" }, [
           el("div", { class: x.t === "e" ? "pos" : "neg", text: (x.t === "e" ? "+ " : "- ") + money(x.v) }),
           el("button", { class: "del", text: "Editar", onclick: function () { S.view = "lancar"; S.confirma = null; S.novaCat = false; S.rasc = null; S.tipo = x.t; S.editLanc = x.id; render(); window.scrollTo(0, 0); } }),
@@ -1080,24 +1139,55 @@ if (typeof document !== "undefined") {
 
   /* ---------- Preços (Avançado) ---------- */
   var EXPRECO = {
-    pizzaria: ["Pizza de mussarela grande", "Massa, molho, queijo", "Caixa, gás do forno, entrega"],
-    lanchonete: ["X-burguer", "Pão, carne, queijo, salada", "Embalagem, sachês, entrega"],
-    barbearia: ["Corte masculino", "Produtos usados no corte", "Toalha, lâmina, desinfecção"],
-    salao: ["Unha em gel", "Gel, lixa, esmalte", "Algodão, álcool, embalagem"],
-    padaria: ["Bolo de chocolate (1 kg)", "Farinha, ovos, chocolate", "Forma, caixa, gás"],
-    roupa: ["Blusa de alça", "Quanto pagou na peça", "Etiqueta, sacola, frete"],
-    lavarapido: ["Lavagem completa de carro", "Shampoo, cera, produtos", "Água, panos, sacos de lixo"],
-    pet: ["Banho e tosa (porte médio)", "Shampoo, perfume, lâmina", "Toalha, água, luvas"],
-    autonomo: ["Manutenção de ar-condicionado", "Peças e materiais do serviço", "Deslocamento, ferramentas"],
-    geral: ["Bolo de pote, unha em gel, conserto de celular...", "Material usado em 1 unidade", "Embalagem, entrega, taxas"]
+    pizzaria: ["Pizza de mussarela grande", "Massa, molho, queijo", "Caixa, gás do forno, entrega", "pizzaiolo pago por hora, gás do forno", "Quantas pizzas"],
+    lanchonete: ["X-burguer", "Pão, carne, queijo, salada", "Embalagem, sachês, entrega", "chapeiro pago por hora, gás da chapa", "Quantos lanches"],
+    barbearia: ["Corte masculino", "Produtos usados no corte", "Toalha, lâmina, desinfecção", "comissão do barbeiro", "Quantos cortes e serviços"],
+    salao: ["Unha em gel", "Gel, lixa, esmalte", "Algodão, álcool, embalagem", "comissão da profissional", "Quantos atendimentos"],
+    padaria: ["Bolo de chocolate (1 kg)", "Farinha, ovos, chocolate", "Forma, caixa, gás", "confeiteiro pago por hora, gás do forno", "Quantas unidades"],
+    roupa: ["Blusa de alça", "Quanto pagou na peça", "Etiqueta, sacola, frete", "comissão da vendedora, frete da mercadoria", "Quantas peças"],
+    lavarapido: ["Lavagem completa de carro", "Shampoo, cera, produtos", "Água, panos, sacos de lixo", "lavador pago por lavagem, água", "Quantas lavagens"],
+    pet: ["Banho e tosa (porte médio)", "Shampoo, perfume, lâmina", "Toalha, água, luvas", "banhista pago por banho, água", "Quantos banhos e serviços"],
+    autonomo: ["Manutenção de ar-condicionado", "Peças e materiais do serviço", "Deslocamento, ferramentas", "ajudante pago por serviço, combustível da visita", "Quantos serviços"],
+    geral: ["Bolo de pote, unha em gel, conserto de celular...", "Material usado em 1 unidade", "Embalagem, entrega, taxas", "mão de obra paga por unidade ou por hora", "Quantas unidades"]
   };
   function exPreco() { return EXPRECO[S.dados.config.nicho] || EXPRECO.geral; }
+  /* Avisa quando os produtos foram calculados com um peso de gastos fixos diferente do atual. */
+  function cardRevisao() {
+    var ps = S.dados.produtos.filter(function (p) { return p.modo === "pct" && p.f > 0; });
+    if (!ps.length) return null;
+    var cx = pesoCaixa(S.dados.lanc, hoje().slice(0, 7), S.dados.config.pro), alvo = null, porque = "";
+    if (cx && cx.f > 0 && cx.f < 90) {
+      var difs = ps.filter(function (p) { var d = Math.abs(p.f - cx.f); return d >= 3 && d / p.f >= 0.15; });
+      if (difs.length) { alvo = cx; porque = "Pelo seu caixa dos últimos " + cx.meses + " meses, os gastos fixos (" + money(cx.fx) + ") pesam " + String(cx.f).replace(".", ",") + "% do que você vende (" + money(cx.fat) + " por mês). " + (difs.length === 1 ? "O produto " + difs[0].nome + " foi calculado" : difs.length + " produtos foram calculados") + " com " + (difs.length === 1 ? String(difs[0].f).replace(".", ",") + "%" : "outro peso") + "."; }
+    }
+    if (!alvo) {
+      var mn = Infinity, mx = 0; ps.forEach(function (p) { mn = Math.min(mn, p.f); mx = Math.max(mx, p.f); });
+      var pb = S.dados.config.precoBase;
+      if (mx - mn >= 1 && pb) { alvo = { fx: pb.fx, fat: pb.fat, f: pesoFixos(pb.fx, pb.fat) }; porque = "Seus produtos estão com pesos diferentes de gastos fixos (de " + String(mn).replace(".", ",") + "% a " + String(mx).replace(".", ",") + "%). O certo é todos usarem a mesma conta do negócio: " + money(pb.fx) + " de gastos fixos para " + money(pb.fat) + " de vendas por mês."; }
+    }
+    if (!alvo) return null;
+    return el("div", { class: "card", id: "p-rev" }, [
+      el("h2", { text: "Hora de revisar os preços" }),
+      el("div", { class: "hint", text: porque }),
+      el("div", { class: "tip", text: "Atualizando, todos os produtos passam a usar " + String(alvo.f).replace(".", ",") + "% de gastos fixos, e o preço ideal de cada um é refeito. O custo, as taxas e o lucro de cada produto não mudam." }),
+      el("button", { class: "btn", text: "Atualizar todos os produtos", onclick: function () {
+        S.dados.produtos.forEach(function (p) { if (p.modo === "pct" && p.f > 0) { p.f = alvo.f; p.fx = alvo.fx; p.fat = alvo.fat; } });
+        S.dados.config.precoBase = { fx: alvo.fx, fat: alvo.fat }; salvar(); aviso("Preços refeitos com os números atuais");
+      } })
+    ]);
+  }
   function viewPrecos() {
-    var ed = S.precEdit || { id: null, nome: "", c: 0, o: 0, r: 0, t: 0, m: 20, p: 0, fx: 0, un: 0, f: 0, fat: 0, modo: "" };
+    var pb = S.dados.config.precoBase || null, herdou = false;
+    var ed = S.precEdit;
+    if (!ed) {
+      ed = { id: null, nome: "", c: 0, o: 0, r: 0, t: 0, m: 20, p: 0, fx: 0, un: 0, f: 0, fat: 0, modo: "" };
+      if (pb) { ed.fx = pb.fx; ed.fat = pb.fat; herdou = true; }
+    }
     if (!S.precModo) S.precModo = ed.modo || (ed.un > 0 || (ed.r > 0 && !(ed.f > 0)) ? "un" : "pct");
     var modo = S.precModo;
     var kids = titulo("Preços");
     kids.push(el("p", { class: "sub", text: "Descubra o preço certo para não perder dinheiro. Preencha para uma unidade do produto ou serviço." }));
+    var rev = cardRevisao(); if (rev) kids.push(rev);
     var fNome = el("input", { id: "p-nome", type: "text", maxlength: "60", placeholder: "Ex.: " + exPreco()[0], value: ed.nome });
     var fC = el("input", { id: "p-c", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.c), autocomplete: "off" });
     var fO = el("input", { id: "p-o", type: "text", inputmode: "decimal", placeholder: "0,00", value: fmtIn(ed.o), autocomplete: "off" });
@@ -1193,25 +1283,27 @@ if (typeof document !== "undefined") {
         var lst = S.dados.produtos;
         var item = { id: ed.id || novoId(), nome: fNome.value.trim() || "Produto sem nome", c: o.c, o: o.o, r: o.r, t: o.t, m: o.m, p: o.p, fx: o.fx || 0, un: o.un || 0, f: o.f || 0, fat: o.fat || 0, modo: o.modo };
         if (ed.id) { for (var i = 0; i < lst.length; i++) if (lst[i].id === ed.id) lst[i] = item; } else lst.push(item);
+        if (item.modo === "pct" && item.f > 0 && item.fx > 0 && item.fat > 0) S.dados.config.precoBase = { fx: item.fx, fat: item.fat };
         S.precEdit = null; S.precModo = null; salvar(); aviso("Produto salvo");
       } }));
       res.appendChild(card);
     }
     kids.push(el("div", { class: "card" }, [
-      rot("p-nome", "Nome do produto ou serviço", "Só para você reconhecer depois, na sua lista. Exemplos: Pizza grande, Corte de cabelo, Livro."), fNome,
-      rot("p-c", "Quanto custa fazer 1 unidade? (" + exPreco()[1].toLowerCase() + ")", "Some só o que você gasta para fazer UMA unidade: ingredientes, material, peças. Exemplo: se uma caixa com 10 custa R$ 50, cada unidade custa R$ 5,00."), fC,
-      rot("p-o", "Outros custos de cada unidade (" + exPreco()[2].toLowerCase() + "...)", "Gastos extras de cada unidade vendida: embalagem, gás, entrega, frete. Não coloque aluguel nem salário aqui: eles vão no campo de baixo."), fO,
+      rot("p-nome", "Nome do produto ou serviço", "Só para você reconhecer depois, na sua lista. Exemplo: " + exPreco()[0] + "."), fNome,
+      rot("p-c", "Quanto custa fazer 1 unidade? (" + exPreco()[1].toLowerCase() + ")", "Some só o que você gasta para fazer ou comprar UMA unidade: matéria-prima, material, mercadoria. Exemplo: se uma caixa com 10 custa R$ 50, cada unidade custa R$ 5,00. Se você paga alguém por unidade ou por hora de produção (" + exPreco()[3] + "), pode somar aqui a parte de cada unidade, mas aí não coloque esse mesmo gasto de novo nos gastos fixos."), fC,
+      rot("p-o", "Outros custos de cada unidade (" + exPreco()[2].toLowerCase() + "...)", "Gastos extras de cada unidade vendida: embalagem, entrega, frete, energia usada só para ela. Não coloque aluguel nem salário fixo aqui: eles vão nos gastos fixos, logo abaixo."), fO,
       el("h2", { style: "margin-top:14px", text: "Gastos fixos do negócio" }),
       el("div", { class: "hint", text: "Aluguel, luz, internet, salários e o seu salário também precisam sair das vendas. Escolha como dividir:" }),
+      el("div", { class: "tip", text: "Cada gasto entra uma vez só. O que você já colocou no custo de cada unidade (por exemplo, " + exPreco()[3] + ") não entra de novo aqui. Contar duas vezes deixa o preço alto à toa." }),
       el("div", { class: "seg", style: "margin-top:8px" }, [
         el("button", { class: modo === "pct" ? "on p" : "p", type: "button", text: "Pelo faturamento", onclick: function () { S.precModo = "pct"; S.precEdit = Object.assign({}, ed, lerRasc()); render(); } }),
         el("button", { class: modo === "un" ? "on p" : "p", type: "button", text: "Por unidade", onclick: function () { S.precModo = "un"; S.precEdit = Object.assign({}, ed, lerRasc()); render(); } })
       ]),
-      el("div", { class: "hint", text: modo === "pct" ? "Melhor para quem vende vários produtos (loja, mercadinho, cosméticos): os gastos fixos viram uma porcentagem de cada venda." : "Melhor para quem vende um produto principal (pizza, corte, marmita): os gastos fixos são divididos pela quantidade vendida no mês." }),
+      el("div", { class: "hint", text: modo === "pct" ? "Melhor para quem vende vários produtos ou serviços: os gastos fixos viram uma porcentagem de cada venda, e cada item paga na proporção do que vende." : "Melhor para quem vende um produto ou serviço principal: os gastos fixos são divididos pela quantidade vendida no mês." }),
       rot("p-fx", "Gastos fixos do mês, no total (com o seu salário)", "Some tudo o que você paga todo mês, mesmo sem vender nada: aluguel, luz, água, internet, contador, funcionários e a sua retirada (o seu salário de dono). Exemplo: 6.000,00. Se deixar em branco, o preço não cobre esses gastos."), fFx,
       modo === "pct"
         ? rot("p-fat", "Quanto o negócio vende por mês, em média", "O faturamento de um mês normal: tudo o que entra com as vendas, antes de pagar qualquer coisa. Use a média dos últimos 3 meses. Se o negócio é novo, faça uma estimativa honesta e ajuste depois de alguns meses de lançamentos. Quanto menos você vende, maior o peso dos gastos fixos em cada venda.")
-        : rot("p-un", "Quantas unidades você vende por mês?", "Quantas pizzas, cortes, peças ou serviços você vende em um mês normal. Se não souber, coloque um número baixo e ajuste depois. Quanto menos você vende, mais cada unidade precisa pagar dos gastos fixos."),
+        : rot("p-un", "Quantas unidades você vende por mês?", exPreco()[4] + " você vende em um mês normal. Se não souber, coloque um número baixo e ajuste depois. Quanto menos você vende, mais cada unidade precisa pagar dos gastos fixos."),
       modo === "pct" ? fFat : fUn,
       el("button", { class: "btn sec", style: "margin-top:8px", text: "Puxar esses números do meu caixa", onclick: function () {
         var ym = hoje().slice(0, 7), l = S.dados.lanc;
@@ -1226,6 +1318,7 @@ if (typeof document !== "undefined") {
         }
         recalc(); rateioMsg.textContent = partes + " " + rateioMsg.textContent;
       } }), rateioMsg,
+      herdou && modo === "pct" ? el("div", { class: "hint", text: "Trouxe os gastos fixos e o faturamento que você usou nos outros produtos, para todos ficarem com a mesma conta. Mude só se o negócio mudou." }) : null,
       rot("p-t", "Taxas e impostos sobre a venda (%)", "Some tudo o que sai como porcentagem de cada venda: maquininha, aplicativo, imposto, comissão, e também frete e cupom quando você paga uma porcentagem do preço. Exemplo: maquininha 5% + frete 9% + cupom 10% = digite 24. Se não tem nenhuma, deixe em branco."), fT,
       rot("p-m", "Lucro que você quer em cada venda (%)", "Quanto você quer que sobre limpo de cada venda, depois de pagar o produto, as taxas e os gastos fixos (com o seu salário). Se quiser guardar uma parte para reinvestir no negócio, some aqui: 15% de lucro + 5% para reinvestir = digite 20. Não é o quanto você soma em cima do custo."), fM,
       rot("p-p", "Preço que você cobra hoje (opcional)", "Se você já vende esse produto, digite o preço atual. O painel mostra se você está ganhando ou perdendo dinheiro com ele. Se não souber, deixe em branco."), fP,
@@ -1319,11 +1412,29 @@ if (typeof document !== "undefined") {
     out.push(ce);
     return out;
   }
+  function cardProdutos() {
+    var vp = vendasPorProduto(S.dados.lanc, S.ym, S.dados.produtos), c = el("div", { class: "card", id: "c-prod" }, [el("h2", { text: "O que mais vende (mês)" })]);
+    if (!vp.lista.length) {
+      c.appendChild(el("div", { class: "hint", text: "Ao lançar uma venda, escolha o produto vendido e a quantidade. Aqui aparece o que mais vende e quanto cada um deixa de lucro." }));
+      return c;
+    }
+    var mx = vp.lista[0].v;
+    vp.lista.slice(0, 8).forEach(function (r) {
+      c.appendChild(el("div", { class: "rank" }, [
+        el("div", { class: "row" }, [el("span", { text: r.nome + " · " + r.q + (r.q === 1 ? " unidade" : " unidades") }), el("b", { text: money(r.v) })]),
+        el("div", { class: "bar", style: "width:" + Math.max(3, Math.round(r.v / mx * 100)) + "%" }),
+        r.lucro !== null ? el("small", { class: r.lucro < 0 ? "neg" : "pos", text: (r.lucro < 0 ? "Prejuízo estimado: " + money(-r.lucro) : "Lucro estimado: " + money(r.lucro)) }) : null
+      ]));
+    });
+    c.appendChild(el("div", { class: "hint", text: "Lucro estimado com o custo, as taxas e os gastos fixos salvos em Preços." + (vp.sem > 0 ? " Vendas lançadas sem produto: " + money(vp.sem) + "." : "") }));
+    return c;
+  }
   function viewPainel() {
     var l = S.dados.lanc, s = resumo(l, S.ym), a = resumo(l, shiftYM(S.ym, -1));
     var kids = titulo("Painel").concat([navMes()]);
     if (PRO) kids.push(el("button", { class: "btn", text: "Salário do Dono: quanto posso tirar", onclick: function () { irPara("salario"); } }));
     if (AV) kids = kids.concat(cardsMetaEquilibrio(s));
+    if (AV && S.dados.produtos.length) kids.push(cardProdutos());
     var comp = el("div", { class: "card" }, [el("h2", { text: "Este mês contra o anterior" })]);
     [["Vendas", s.receita, a.receita], ["Custos e despesas", s.custos, a.custos], ["Lucro", s.lucro, a.lucro]].forEach(function (r) {
       comp.appendChild(el("div", { class: "item" }, [el("span", { text: r[0] }),
@@ -1486,9 +1597,9 @@ if (typeof document !== "undefined") {
         el("button", { class: "btn danger", text: "Substituir pelos dados do backup", onclick: function () { S.dados = S.restaurar; S.restaurar = null; salvar(); aviso("Backup restaurado"); } }),
         el("button", { class: "btn sec", text: "Cancelar", onclick: function () { S.restaurar = null; render(); } })]) : null,
       el("button", { class: "btn sec", text: "Exportar para Excel (CSV)", onclick: function () {
-        var linhas = ["Data;Tipo;Categoria;Valor;Observação"];
+        var linhas = ["Data;Tipo;Categoria;Valor;Observação;Produto;Quantidade"];
         d.lanc.slice().sort(function (a, b) { return a.d < b.d ? -1 : 1; }).forEach(function (x) {
-          linhas.push([x.d.slice(8, 10) + "/" + x.d.slice(5, 7) + "/" + x.d.slice(0, 4), x.t === "e" ? "Entrada" : "Saída", csvCampo(x.c), (x.v / 100).toFixed(2).replace(".", ","), csvCampo(x.o)].join(";"));
+          linhas.push([x.d.slice(8, 10) + "/" + x.d.slice(5, 7) + "/" + x.d.slice(0, 4), x.t === "e" ? "Entrada" : "Saída", csvCampo(x.c), (x.v / 100).toFixed(2).replace(".", ","), csvCampo(x.o), x.pr ? csvCampo(nomeProd(x.pr)) : "", x.pr ? String(x.q || 1) : ""].join(";"));
         });
         if (d.lanc.length === 0) { toast("Ainda não há lançamentos para exportar"); return; }
         entregar("lancamentos-" + hoje() + ".csv", "﻿" + linhas.join("\r\n"), "text/csv;charset=utf-8");
