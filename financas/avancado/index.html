@@ -411,6 +411,39 @@ function salarioDono(l, ym, pro, ymHoje) {
            cobre: custo > 0 && media !== null ? sustenta >= custo : null, qtd: s.qtd, emAndamento: ym === ymHoje };
 }
 
+/* Conserta dados lidos do aparelho: tira só os registros defeituosos e mantém todo o resto.
+   Devolve { dados, descartados } ou null quando não dá para aproveitar nada. */
+function repararDados(obj) {
+  if (!obj || typeof obj !== "object" || !Array.isArray(obj.lanc) || !obj.config || typeof obj.config !== "object") return null;
+  var bons = obj.lanc.filter(function (x) {
+    return x && typeof x === "object" && typeof x.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.d) && (x.t === "e" || x.t === "s") &&
+           typeof x.v === "number" && isFinite(x.v) && x.v > 0 && Math.floor(x.v) === x.v;
+  });
+  var limpo = validarBackup({ lanc: bons, contas: obj.contas, produtos: obj.produtos, config: obj.config });
+  if (!limpo) return null;
+  var nc = Array.isArray(obj.contas) ? obj.contas.length : 0, np = Array.isArray(obj.produtos) ? obj.produtos.length : 0;
+  return { dados: limpo, descartados: (obj.lanc.length - bons.length) + (nc - limpo.contas.length) + (np - limpo.produtos.length) };
+}
+/* Junta o que esta janela tem com o que outra janela gravou, sem perder nada de nenhuma.
+   base = ids que esta janela conhecia na última leitura. Item novo de qualquer lado entra;
+   item apagado de um lado sai; item mexido nos dois lados fica com a versão desta janela. */
+function mesclarDados(meu, gravado, base) {
+  function juntar(a, b, nome) {
+    var visto = base[nome] || {}, meus = {}, out = [];
+    a.forEach(function (x) { meus[x.id] = 1; });
+    var la = {}; b.forEach(function (x) { la[x.id] = 1; });
+    a.forEach(function (x) { if (la[x.id] || !visto[x.id]) out.push(x); });      /* some o que a outra janela apagou */
+    b.forEach(function (x) { if (!meus[x.id] && !visto[x.id]) out.push(x); });   /* entra o que a outra janela criou */
+    return out;
+  }
+  return { lanc: juntar(meu.lanc, gravado.lanc, "lanc"), contas: juntar(meu.contas, gravado.contas, "contas"),
+           produtos: juntar(meu.produtos, gravado.produtos, "produtos"), config: meu.config };
+}
+function idsDe(d) {
+  var o = { lanc: {}, contas: {}, produtos: {} };
+  ["lanc", "contas", "produtos"].forEach(function (n) { (d[n] || []).forEach(function (x) { o[n][x.id] = 1; }); });
+  return o;
+}
 function validarBackup(obj) {
   if (!obj || typeof obj !== "object" || !Array.isArray(obj.lanc)) return null;
   var out = [];
@@ -492,7 +525,7 @@ if (typeof module !== "undefined") {
   module.exports = { verificarLicenca: verificarLicenca, resumo: resumo, porMes: porMes, porCategoria: porCategoria, leitura: leitura, parseMoney: parseMoney,
                      shiftYM: shiftYM, validarBackup: validarBackup, NICHOS: NICHOS, categoriasDe: categoriasDe,
                      novaCategoria: novaCategoria, textoResumo: textoResumo, ehFixo: ehFixo, addDias: addDias, diasEntre: diasEntre,
-                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase, pesoCaixa: pesoCaixa, vendasPorProduto: vendasPorProduto, resumoAte: resumoAte, variacao: variacao, parcelasBase: parcelasBase,
+                     fixosBase: fixosBase, salarioDono: salarioDono, dividirSobra: dividirSobra, potesValidos: potesValidos, mediaSobra: mediaSobra, pontoEquilibrio: pontoEquilibrio, precificar: precificar, rateioFixo: rateioFixo, pesoFixos: pesoFixos, receitaMedia: receitaMedia, retiradaBase: retiradaBase, pesoCaixa: pesoCaixa, vendasPorProduto: vendasPorProduto, repararDados: repararDados, mesclarDados: mesclarDados, idsDe: idsDe, resumoAte: resumoAte, variacao: variacao, parcelasBase: parcelasBase,
                      resumoContas: resumoContas, statusConta: statusConta };
 }
 
@@ -502,28 +535,110 @@ if (typeof document !== "undefined") {
   var BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   function money(c) { return BRL.format(c / 100); }
   function fmtIn(c) { return c > 0 ? (c / 100).toFixed(2).replace(".", ",") : ""; }
-  var semArmazenamento = false;
+  var semArmazenamento = false, falhaSalvar = false, ultimoBruto = null, baseIds = { lanc: {}, contas: {}, produtos: {} };
+  var KSEG = "painel_seg_" + EDICAO, KSEGD = "painel_segd_" + EDICAO, KRESG = "painel_resgate_" + EDICAO, KANT = "painel_ant_" + EDICAO;
+  /* Três redes: KANT = estado logo antes da última gravação; KSEG = estado no começo do dia; KRESG = texto bruto que não pôde ser lido. */
+  function copiaRecente() { try { var t = localStorage.getItem(KANT); if (!t) return null; var r = interpretar(t); return r ? { dados: r.dados, bruto: t } : null; } catch (e) { return null; } }
+  var resgate = null; /* { motivo, bruto } quando o que está gravado não pôde ser lido */
+  function lerBruto() { try { return localStorage.getItem(CHAVE); } catch (e) { return null; } }
+  function interpretar(t) { try { return repararDados(JSON.parse(t)); } catch (e) { return null; } }
+  function guardarResgate(t) { try { if (t && localStorage.getItem(KRESG) !== t) localStorage.setItem(KRESG, t); } catch (e) {} }
+  function copiaSeguranca() {
+    try { var t = localStorage.getItem(KSEG); if (!t) return null; var r = interpretar(t); if (!r) return null;
+      return { dados: r.dados, bruto: t, dia: localStorage.getItem(KSEGD) || "" }; } catch (e) { return null; }
+  }
   function carregar() {
+    var t = null;
     try {
-      var t = localStorage.getItem(CHAVE);
+      t = localStorage.getItem(CHAVE);
       if (!t && AV) { var t2 = localStorage.getItem("painel_dono_basico_v1"); if (t2) { t = t2; try { localStorage.setItem(CHAVE, t2); } catch (e2) {} } } /* quem sobe do Básico para o Avançado leva os dados junto */
-      if (t) {
-        var o = JSON.parse(t);
-        if (o && Array.isArray(o.lanc) && o.config) {
-          o.config.custom = o.config.custom || { e: [], s: [] };
-          o.config.tema = o.config.tema || "auto";
-          o.config.meta = o.config.meta || 0;
-          if (!o.config.pro || !potesValidos(o.config.pro.pot)) o.config.pro = { custo: (o.config.pro && o.config.pro.custo) || 0, pot: POTES_PADRAO.slice() };
-          o.contas = Array.isArray(o.contas) ? o.contas : [];
-          o.produtos = Array.isArray(o.produtos) ? o.produtos : [];
-          return o;
+    } catch (e) { semArmazenamento = true; return null; }
+    if (!t) { if (copiaRecente() || copiaSeguranca()) resgate = { motivo: "sumiu", bruto: null }; return null; }
+    var r = interpretar(t);
+    if (!r) { guardarResgate(t); resgate = { motivo: "estragado", bruto: t }; return null; } /* nunca cai no cadastro por cima de dado que existia */
+    if (r.descartados > 0) guardarResgate(t);
+    ultimoBruto = t; baseIds = idsDe(r.dados);
+    return r.dados;
+  }
+  /* Grava e confere. Antes da primeira gravação do dia, guarda uma cópia de segurança do que havia.
+     Se outra janela gravou nesse meio-tempo, junta os dois lados antes de gravar. */
+  function salvar() {
+    try {
+      var agora = localStorage.getItem(CHAVE);
+      if (agora && ultimoBruto !== null && agora !== ultimoBruto) { var outro = interpretar(agora); if (outro) S.dados = mesclarDados(S.dados, outro.dados, baseIds); }
+      var txt = JSON.stringify(S.dados);
+      if (agora && agora !== txt) {
+        var hj = hoje();
+        if (localStorage.getItem(KSEGD) !== hj && agora.length < 2000000 && interpretar(agora)) {
+          try { localStorage.setItem(KSEG, agora); localStorage.setItem(KSEGD, hj); } catch (e1) { try { localStorage.removeItem(KSEG); } catch (e2) {} }
         }
       }
-    } catch (e) { semArmazenamento = true; }
-    return null;
+      if (agora && agora !== txt && agora.length < 1500000) { try { localStorage.setItem(KANT, agora); } catch (e3) { try { localStorage.removeItem(KANT); } catch (e4) {} } }
+      else if (agora && agora.length >= 1500000) { try { localStorage.removeItem(KANT); } catch (e5) {} }
+      localStorage.setItem(CHAVE, txt);
+      if (localStorage.getItem(CHAVE) !== txt) throw new Error("conferencia");
+      ultimoBruto = txt; baseIds = idsDe(S.dados); falhaSalvar = false; semArmazenamento = false;
+      carimbar(txt);
+      return true;
+    } catch (e) { falhaSalvar = true; return false; }
   }
-  function salvar() {
-    try { localStorage.setItem(CHAVE, JSON.stringify(S.dados)); } catch (e) { semArmazenamento = true; }
+  /* Segunda gravação, no banco do navegador (IndexedDB), que vai para o disco na hora.
+     O localStorage pode levar alguns segundos para chegar ao disco: se o celular desligar nesse intervalo,
+     o último lançamento é recuperado daqui. Cada gravação leva um número de ordem; vale a de número maior. */
+  var KSEQ = "painel_seq_" + EDICAO, banco = null, bancoN = 0, gravouNaSessao = false;
+  function seqAtual() { try { var n = parseInt(localStorage.getItem(KSEQ) || "0", 10); return n > 0 ? n : 0; } catch (e) { return 0; } }
+  function bancoGravar(txt, n) {
+    if (!banco || !txt) return;
+    try {
+      var tx; try { tx = banco.transaction("kv", "readwrite", { durability: "strict" }); } catch (e0) { tx = banco.transaction("kv", "readwrite"); }
+      tx.objectStore("kv").put({ t: txt, n: n }, CHAVE); bancoN = Math.max(bancoN, n);
+    } catch (e) {}
+  }
+  function carimbar(txt) { /* chamada depois de cada gravação conferida no localStorage */
+    var n = Math.max(seqAtual(), bancoN) + 1;
+    try { localStorage.setItem(KSEQ, String(n)); } catch (e) {}
+    gravouNaSessao = true; bancoGravar(txt, n);
+  }
+  function bancoIniciar() {
+    try {
+      if (typeof indexedDB === "undefined" || !indexedDB) return;
+      var rq = indexedDB.open("bumeran_painel", 1);
+      rq.onupgradeneeded = function () { try { rq.result.createObjectStore("kv"); } catch (e) {} };
+      rq.onerror = function () {};
+      rq.onsuccess = function () {
+        banco = rq.result;
+        try {
+          var g = banco.transaction("kv", "readonly").objectStore("kv").get(CHAVE);
+          g.onsuccess = function () {
+            var r = g.result, atual = lerBruto(), seq = seqAtual();
+            if (!r || typeof r.t !== "string" || !(r.n > 0)) { if (atual && S.dados) bancoGravar(atual, Math.max(seq, 1)); return; }
+            bancoN = r.n;
+            if (gravouNaSessao) { if (atual) carimbar(atual); return; }          /* já houve gravação nova nesta abertura: ela vale */
+            var atualBom = !!(atual && interpretar(atual));
+            if (r.t !== atual && (r.n > seq || !atualBom)) {                     /* o banco tem algo mais novo, ou o principal está ilegível */
+              var p = interpretar(r.t); if (!p) return;
+              try { if (atual) localStorage.setItem(KANT, atual); localStorage.setItem(CHAVE, r.t); localStorage.setItem(KSEQ, String(r.n)); } catch (e) {}
+              S.dados = p.dados; ultimoBruto = lerBruto() || r.t; baseIds = idsDe(S.dados); resgate = null;
+              render(); toast("Recuperamos o que você tinha lançado por último");
+            } else if (atualBom && (r.n < seq || (r.n === seq && r.t !== atual))) bancoGravar(atual, seq);
+          };
+        } catch (e) {}
+      };
+    } catch (e) {}
+  }
+  /* Outra janela (ou o app instalado) gravou: passa a usar o que está gravado. */
+  function sincronizar() {
+    if (!S || !S.dados || falhaSalvar) return false;
+    var t = lerBruto(); if (!t || t === ultimoBruto) return false;
+    var r = interpretar(t); if (!r) return false;
+    S.dados = r.dados; ultimoBruto = t; baseIds = idsDe(r.dados);
+    return true;
+  }
+  /* Antes de uma ação que apaga ou troca tudo, guarda o estado atual como cópia de segurança. */
+  function forcarCopia() { try { var t = localStorage.getItem(CHAVE); if (t && t.length < 2000000 && interpretar(t)) { localStorage.setItem(KSEG, t); localStorage.setItem(KSEGD, hoje()); } } catch (e) {} }
+  function espacoUsado() {
+    var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || "").length; } } catch (e) {}
+    return { chars: n, pct: Math.min(100, Math.round(n / 5000000 * 100)) };
   }
   function hoje() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
   function nomeMes(ym) {
@@ -542,8 +657,14 @@ if (typeof document !== "undefined") {
   var app = document.getElementById("app");
   /* Se o painel ficou aberto em segundo plano e o dia (ou o mês) virou, atualiza ao voltar. */
   var diaVisto = hoje();
+  function digitando() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== "checkbox"); }
+  function aoVoltar() { if (sincronizar() && !digitando()) render(); }
+  window.addEventListener("storage", function (e) { if (e.key === CHAVE || e.key === null) aoVoltar(); });
+  window.addEventListener("focus", aoVoltar);
+  window.addEventListener("pageshow", aoVoltar);
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) return;
+    aoVoltar();
     var h = hoje();
     if (h === diaVisto) return;
     if (S.ym === diaVisto.slice(0, 7)) S.ym = h.slice(0, 7);
@@ -569,6 +690,7 @@ if (typeof document !== "undefined") {
   var toastT = null;
   function toast(t) {
     var e = document.getElementById("toast"); if (!e) return;
+    if (falhaSalvar) t = "ATENÇÃO: NÃO SALVOU. Veja o aviso no alto da tela.";
     e.textContent = t; e.style.display = "block";
     clearTimeout(toastT); toastT = setTimeout(function () { e.style.display = "none"; }, 2400);
   }
@@ -631,8 +753,8 @@ if (typeof document !== "undefined") {
   function cardBackupAtrasado() {
     if (S.dados.lanc.length < 15 || S.bkDepois) return null;
     var u = lsGet(KBK);
-    if (u && /^\d{4}-\d{2}-\d{2}$/.test(u) && diasEntre(u, hoje()) < 15) return null;
-    return el("div", { class: "card", style: "border-left:4px solid var(--warn)" }, [el("h2", { text: u ? "Faz mais de 15 dias que você não faz backup" : "Você ainda não fez nenhum backup" }),
+    if (u && /^\d{4}-\d{2}-\d{2}$/.test(u) && diasEntre(u, hoje()) < 7) return null;
+    return el("div", { class: "card", style: "border-left:4px solid var(--warn)" }, [el("h2", { text: u ? "Faz mais de uma semana que você não faz backup" : "Você ainda não fez nenhum backup" }),
       el("p", { class: "sub", text: "Seus lançamentos ficam só neste aparelho. Se o celular quebrar ou for trocado, o backup é o que salva tudo. Leva 10 segundos." }),
       el("button", { class: "btn", text: "Fazer backup agora", onclick: function () { fazerBackup(); render(); } }),
       el("button", { class: "btn sec", text: "Depois", onclick: function () { S.bkDepois = true; render(); } })]);
@@ -1642,7 +1764,7 @@ if (typeof document !== "undefined") {
       el("button", { class: "btn sec", text: "Restaurar backup", onclick: function () { arq.click(); } }), arq,
       S.restaurar ? el("div", { id: "bk-conf", class: "tip" }, [
         el("div", { text: "O backup escolhido tem " + S.restaurar.lanc.length + " lançamentos. Ele vai substituir tudo o que está neste aparelho agora (" + d.lanc.length + " lançamentos)." }),
-        el("button", { class: "btn danger", text: "Substituir pelos dados do backup", onclick: function () { S.dados = S.restaurar; S.restaurar = null; salvar(); aviso("Backup restaurado"); } }),
+        el("button", { class: "btn danger", text: "Substituir pelos dados do backup", onclick: function () { forcarCopia(); S.dados = S.restaurar; S.restaurar = null; salvar(); aviso("Backup restaurado"); } }),
         el("button", { class: "btn sec", text: "Cancelar", onclick: function () { S.restaurar = null; render(); } })]) : null,
       el("button", { class: "btn sec", text: "Exportar para Excel (CSV)", onclick: function () {
         var linhas = ["Data;Tipo;Categoria;Valor;Observação;Produto;Quantidade"];
@@ -1687,9 +1809,29 @@ if (typeof document !== "undefined") {
       el("h2", { text: "Apagar tudo" }),
       el("button", { class: "btn " + (pedindo ? "danger" : "sec"), text: pedindo ? "Toque de novo para apagar tudo" : "Apagar todos os dados", onclick: function () {
         if (!pedindo) { S.confirma = "apagar"; render(); return; }
-        S.dados.lanc = []; S.dados.contas = []; S.dados.produtos = []; S.dados.config.meta = 0; S.confirma = null; salvar(); aviso("Dados apagados");
+        forcarCopia(); S.dados.lanc = []; S.dados.contas = []; S.dados.produtos = []; S.dados.config.meta = 0; S.confirma = null; salvar(); aviso("Dados apagados");
       } }),
       el("div", { class: "hint", text: "Apaga lançamentos, contas e produtos deste aparelho. Não dá para desfazer: faça um backup antes." })
+    ]));
+    var esp = espacoUsado();
+    kids.push(el("div", { class: "card", id: "c-espaco" }, [el("h2", { text: "Seus dados neste aparelho" }),
+      el("div", { class: "hint", text: S.dados.lanc.length + " lançamentos, " + S.dados.contas.length + " contas e " + S.dados.produtos.length + " produtos guardados. Espaço usado: " + esp.pct + "% do que o aplicativo pode usar." }),
+      el("div", { class: "hint", text: "Cada lançamento é gravado na hora e conferido. O aplicativo grava em dois lugares do aparelho ao mesmo tempo e ainda guarda sozinho duas cópias de segurança: uma de antes do último lançamento e uma do começo do dia." }),
+      esp.pct >= 70 ? el("div", { class: "tip", text: "O espaço está acabando. Faça um backup agora e fale com a Bumerân para arquivar os anos antigos." }) : null,
+      (function () {
+        var cs = copiaSeguranca(); if (!cs || cs.bruto === lerBruto()) return null;
+        var dia = /^\d{4}-\d{2}-\d{2}$/.test(cs.dia) ? cs.dia.slice(8, 10) + "/" + cs.dia.slice(5, 7) : "";
+        var pede = S.confirma === "voltarcopia";
+        return el("div", null, [
+          el("button", { class: "btn " + (pede ? "danger" : "sec"), text: pede ? "Toque de novo para voltar à cópia" : "Voltar à cópia de segurança" + (dia ? " de " + dia : ""), onclick: function () {
+            if (!pede) { S.confirma = "voltarcopia"; render(); return; }
+            var atual = lerBruto(); S.dados = cs.dados; S.confirma = null; ultimoBruto = atual; baseIds = idsDe(S.dados);
+            try { localStorage.setItem(CHAVE, JSON.stringify(S.dados)); if (atual) { localStorage.setItem(KSEG, atual); localStorage.setItem(KSEGD, hoje()); } ultimoBruto = lerBruto(); if (ultimoBruto) carimbar(ultimoBruto); } catch (e) { falhaSalvar = true; }
+            aviso("Voltou para a cópia de segurança");
+          } }),
+          el("div", { class: "hint", text: "A cópia tem " + cs.dados.lanc.length + " lançamentos (agora você tem " + S.dados.lanc.length + "). Use se apagou algo sem querer. O que está na tela agora vira a nova cópia, então dá para desfazer." })
+        ]);
+      })()
     ]));
     kids.push(el("p", { class: "hint", text: "O Meu Painel do Dono mostra indicadores simples a partir do que você lança. Ele não substitui contador nem dá orientação fiscal. Nenhum dado seu é enviado para servidor." }));
     return el("div", null, kids);
@@ -1767,7 +1909,7 @@ if (typeof document !== "undefined") {
       app.appendChild(viewLicenca());
       return;
     }
-    if (!S.dados) { tabs.style.display = "none"; app.appendChild(viewOnboarding()); return; }
+    if (!S.dados) { tabs.style.display = "none"; app.appendChild(resgate ? viewResgate() : viewOnboarding()); return; }
     tabs.style.display = "block";
     TABS.forEach(function (t) {
       var fab = t[0] === "lancar";
@@ -1780,13 +1922,72 @@ if (typeof document !== "undefined") {
         el("div", null, [el("h1", { text: S.dados.config.negocio }), el("div", { class: "sub", text: nicho().nome })])]));
     }
     if (semArmazenamento) app.appendChild(el("div", { class: "tip", text: "Este navegador não está guardando os dados. Saia do modo anônimo ou baixe o backup com frequência." }));
+    if (falhaSalvar) app.appendChild(el("div", { class: "card", id: "nao-salvou", style: "border:2px solid var(--out)" }, [
+      el("h2", { style: "color:var(--out)", text: "Atenção: NÃO SALVOU" }),
+      el("div", { class: "hint", text: "O celular não deixou gravar (memória cheia ou navegador em modo anônimo). O que você lançou agora está só nesta tela: não feche o aplicativo antes de resolver." }),
+      el("button", { class: "btn", text: "Tentar gravar de novo", onclick: function () { if (salvar()) aviso("Agora gravou. Está tudo salvo."); else aviso("Ainda não gravou"); } }),
+      el("button", { class: "btn sec", text: "Baixar backup agora", onclick: function () { entregar("meu-painel-backup.json", JSON.stringify(S.dados), "application/json"); } }),
+      el("div", { class: "hint", text: "Dica: libere espaço no celular (fotos, vídeos) ou saia do modo anônimo e toque em Tentar gravar de novo." })
+    ]));
     var f = VIEWS[S.view] || viewInicio;
     if ((S.view === "contas" || S.view === "precos" || S.view === "relatorio") && !AV) f = viewInicio;
     if (S.view === "salario" && !PRO) f = viewInicio;
-    app.appendChild(f());
+    try { app.appendChild(f()); }
+    catch (err) {
+      /* rede de proteção: uma tela com defeito nunca apaga nem esconde os dados */
+      app.appendChild(el("div", { class: "card", id: "tela-erro" }, [
+        el("h2", { text: "Esta tela teve um problema" }),
+        el("div", { class: "hint", text: "Seus dados continuam guardados. Volte ao início; se o problema continuar, baixe o backup e fale com a Bumerân." }),
+        el("button", { class: "btn", text: "Voltar ao início", onclick: function () { S.view = "inicio"; S.editLanc = null; S.precEdit = null; S.rasc = null; render(); } }),
+        el("button", { class: "btn sec", text: "Baixar backup", onclick: function () { entregar("meu-painel-backup.json", lerBruto() || JSON.stringify(S.dados), "application/json"); } }),
+        CONTATO_WHATSAPP ? el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", target: "_blank", rel: "noopener",
+          href: "https://wa.me/" + CONTATO_WHATSAPP + "?text=" + encodeURIComponent("Oi! Uma tela do Meu Painel do Dono deu problema (" + S.view + "): " + String(err && err.message || err).slice(0, 120)), text: "Falar com a Bumerân" }) : null
+      ]));
+    }
+  }
+  /* Tela de recuperação: aparece no lugar do cadastro quando havia dados e eles não puderam ser lidos. */
+  function viewResgate() {
+    var cr = copiaRecente(), cs = copiaSeguranca(), bruto = resgate.bruto || lsGet(KRESG);
+    if (cr && cs && cr.bruto === cs.bruto) cs = null;
+    var kids = [el("div", { class: "top" }, [el("div", { class: "logo", text: "🛟" }), el("div", null, [el("h1", { text: "Meu Painel do Dono" }), el("div", { class: "sub", text: "Recuperação dos seus dados" })])])];
+    var card = el("div", { class: "card", id: "resgate" }, [
+      el("h2", { text: resgate.motivo === "sumiu" ? "Não encontramos os dados deste aparelho" : "Os dados gravados estão com defeito" }),
+      el("div", { class: "hint", text: "Fique tranquilo: nada foi apagado por cima. O aplicativo guarda sozinho uma cópia de segurança, e você pode recuperar por ela." })
+    ]);
+    if (cr) {
+      card.appendChild(el("div", { class: "tip", text: "Cópia mais recente (de antes do último lançamento): " + cr.dados.lanc.length + " lançamentos, " + cr.dados.contas.length + " contas, " + cr.dados.produtos.length + " produtos." }));
+      card.appendChild(el("button", { class: "btn", id: "rec-recente", text: "Recuperar pela cópia mais recente", onclick: function () {
+        S.dados = cr.dados; ultimoBruto = null; resgate = null; salvar(); aviso("Dados recuperados");
+      } }));
+    }
+    if (cs) {
+      var dia = /^\d{4}-\d{2}-\d{2}$/.test(cs.dia) ? cs.dia.slice(8, 10) + "/" + cs.dia.slice(5, 7) + "/" + cs.dia.slice(0, 4) : "";
+      card.appendChild(el("div", { class: "tip", text: "Cópia do começo do dia" + (dia ? " " + dia : "") + ": " + cs.dados.lanc.length + " lançamentos, " + cs.dados.contas.length + " contas, " + cs.dados.produtos.length + " produtos." }));
+      card.appendChild(el("button", { class: cr ? "btn sec" : "btn", id: "rec-dia", text: "Recuperar pela cópia do começo do dia", onclick: function () {
+        S.dados = cs.dados; ultimoBruto = null; resgate = null; salvar(); aviso("Dados recuperados");
+      } }));
+    }
+    var fi = el("input", { type: "file", accept: ".json,application/json", style: "display:none" });
+    fi.addEventListener("change", function () {
+      var f = fi.files && fi.files[0]; if (!f) return; var rd = new FileReader();
+      rd.onload = function () { var r = interpretar(String(rd.result)); if (!r) { toast("Este arquivo não é um backup do Painel"); return; } S.dados = r.dados; ultimoBruto = null; resgate = null; salvar(); aviso("Backup restaurado"); };
+      rd.readAsText(f);
+    });
+    card.appendChild(fi);
+    card.appendChild(el("button", { class: "btn sec", text: "Restaurar um arquivo de backup", onclick: function () { fi.click(); } }));
+    if (bruto) card.appendChild(el("button", { class: "btn sec", text: "Baixar os dados do jeito que estão", onclick: function () { entregar("meu-painel-dados-brutos.json", bruto, "application/json"); } }));
+    if (CONTATO_WHATSAPP) card.appendChild(el("a", { class: "btn sec", style: "display:block;text-align:center;text-decoration:none", target: "_blank", rel: "noopener",
+      href: "https://wa.me/" + CONTATO_WHATSAPP + "?text=" + encodeURIComponent("Oi! O Meu Painel do Dono abriu na tela de recuperação de dados. Pode me ajudar?"), text: "Falar com a Bumerân" }));
+    card.appendChild(el("button", { class: "del", style: "margin-top:14px", text: S.confirma === "zero" ? "Toque de novo para começar do zero" : "Começar do zero (sem recuperar)", onclick: function () {
+      if (S.confirma !== "zero") { S.confirma = "zero"; render(); return; }
+      S.confirma = null; resgate = null; render();
+    } }));
+    kids.push(card);
+    return el("div", null, kids);
   }
   window.__painel = S;
   render();
+  bancoIniciar();
   licIniciar();
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
     navigator.serviceWorker.register("sw.js").catch(function () {});
